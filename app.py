@@ -12,19 +12,68 @@ from payroll_calculator import compute_employee_payroll, KHR_PER_USD
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'cambodia-hrms-secret-key-2026')
-db_uri = os.environ.get('DATABASE_URL', 'sqlite:///hrms.db')
+
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+IS_VERCEL = bool(os.environ.get('VERCEL') or os.environ.get('AWS_LAMBDA_FUNCTION_NAME'))
+
+if IS_VERCEL:
+    import tempfile
+    import shutil
+    TMP_DIR = tempfile.gettempdir()
+    UPLOAD_FOLDER = os.path.join(TMP_DIR, 'uploads')
+    AVATAR_FOLDER = os.path.join(UPLOAD_FOLDER, 'avatars')
+    DOC_FOLDER = os.path.join(UPLOAD_FOLDER, 'documents')
+
+    try:
+        os.makedirs(AVATAR_FOLDER, exist_ok=True)
+        os.makedirs(DOC_FOLDER, exist_ok=True)
+    except Exception as e:
+        print("Vercel mkdir warning:", e)
+
+    # Copy pre-bundled avatars & documents from project root to /tmp/uploads
+    bundled_uploads = os.path.join(BASE_DIR, 'uploads')
+    if os.path.exists(bundled_uploads):
+        for sub in ['avatars', 'documents']:
+            src_sub = os.path.join(bundled_uploads, sub)
+            dst_sub = os.path.join(UPLOAD_FOLDER, sub)
+            if os.path.exists(src_sub):
+                for f_name in os.listdir(src_sub):
+                    sf = os.path.join(src_sub, f_name)
+                    df = os.path.join(dst_sub, f_name)
+                    if os.path.isfile(sf) and not os.path.exists(df):
+                        try:
+                            shutil.copy2(sf, df)
+                        except Exception:
+                            pass
+
+    # Copy bundled SQLite database to /tmp/hrms.db for read-write access
+    db_file = os.path.join(TMP_DIR, 'hrms.db')
+    bundled_db = os.path.join(BASE_DIR, 'instance', 'hrms.db')
+    if os.path.exists(bundled_db) and not os.path.exists(db_file):
+        try:
+            shutil.copy2(bundled_db, db_file)
+        except Exception as e:
+            print("Notice copying bundled db to tmp:", e)
+
+    DEFAULT_DB_URI = f"sqlite:///{db_file.replace(os.sep, '/')}"
+else:
+    UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
+    AVATAR_FOLDER = os.path.join(UPLOAD_FOLDER, 'avatars')
+    DOC_FOLDER = os.path.join(UPLOAD_FOLDER, 'documents')
+
+    try:
+        os.makedirs(AVATAR_FOLDER, exist_ok=True)
+        os.makedirs(DOC_FOLDER, exist_ok=True)
+    except OSError:
+        pass
+
+    DEFAULT_DB_URI = 'sqlite:///hrms.db'
+
+db_uri = os.environ.get('DATABASE_URL', DEFAULT_DB_URI)
 if db_uri and db_uri.startswith('postgres://'):
     db_uri = db_uri.replace('postgres://', 'postgresql://', 1)
 app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-# Upload folders
-UPLOAD_FOLDER = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'uploads')
-AVATAR_FOLDER = os.path.join(UPLOAD_FOLDER, 'avatars')
-DOC_FOLDER = os.path.join(UPLOAD_FOLDER, 'documents')
-
-os.makedirs(AVATAR_FOLDER, exist_ok=True)
-os.makedirs(DOC_FOLDER, exist_ok=True)
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload
@@ -133,17 +182,24 @@ def ensure_default_admin():
     try:
         # Check SQLite table column approval_status
         import sqlite3
-        db_path = os.path.join(app.instance_path, 'hrms.db')
-        if os.path.exists(db_path):
-            con = sqlite3.connect(db_path)
-            cur = con.cursor()
-            cur.execute("PRAGMA table_info(users);")
-            cols = [r[1] for r in cur.fetchall()]
-            if 'approval_status' not in cols:
-                cur.execute("ALTER TABLE users ADD COLUMN approval_status VARCHAR(30) DEFAULT 'approved';")
-                con.commit()
-            con.close()
+        current_db_uri = app.config.get('SQLALCHEMY_DATABASE_URI', '')
+        if current_db_uri.startswith('sqlite:///'):
+            db_path = current_db_uri.replace('sqlite:///', '')
+            if not os.path.isabs(db_path):
+                db_path = os.path.join(app.instance_path, db_path)
+            if os.path.exists(db_path):
+                con = sqlite3.connect(db_path)
+                cur = con.cursor()
+                cur.execute("PRAGMA table_info(users);")
+                cols = [r[1] for r in cur.fetchall()]
+                if 'approval_status' not in cols:
+                    cur.execute("ALTER TABLE users ADD COLUMN approval_status VARCHAR(30) DEFAULT 'approved';")
+                    con.commit()
+                con.close()
+    except Exception as e:
+        print("Schema check notice:", e)
 
+    try:
         # Permanent super admin: ADMIN / syd001
         admin = User.query.filter(User.username.ilike('ADMIN')).first()
         if admin:
@@ -171,10 +227,13 @@ def ensure_default_admin():
         print("ensure_default_admin error:", e)
 
 
-with app.app_context():
-    db.create_all()
-    ensure_organization_structure()
-    ensure_default_admin()
+try:
+    with app.app_context():
+        db.create_all()
+        ensure_organization_structure()
+        ensure_default_admin()
+except Exception as e:
+    print("Database init notice:", e)
 
 
 @app.before_request
@@ -1387,10 +1446,19 @@ def delete_document(doc_id):
 
 @app.route('/uploads/<folder>/<filename>')
 def serve_upload(folder, filename):
-    if folder == 'avatars':
-        return send_from_directory(AVATAR_FOLDER, filename)
-    elif folder == 'documents':
-        return send_from_directory(DOC_FOLDER, filename)
+    folder_map = {
+        'avatars': AVATAR_FOLDER,
+        'documents': DOC_FOLDER
+    }
+    target_dir = folder_map.get(folder)
+    if target_dir and os.path.exists(os.path.join(target_dir, filename)):
+        return send_from_directory(target_dir, filename)
+
+    # Fallback to bundled uploads folder (e.g. on Vercel)
+    bundled_target = os.path.join(BASE_DIR, 'uploads', folder)
+    if os.path.exists(os.path.join(bundled_target, filename)):
+        return send_from_directory(bundled_target, filename)
+
     return "Not Found", 404
 
 
@@ -1990,6 +2058,10 @@ def payroll_export_csv():
         mimetype="text/csv",
         headers={"Content-disposition": f"attachment; filename=payroll_report_{month_str}.csv"}
     )
+
+
+# Export handler for Vercel / WSGI Serverless
+handler = app
 
 
 if __name__ == '__main__':
