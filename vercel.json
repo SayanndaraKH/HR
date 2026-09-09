@@ -1,18 +1,8 @@
 {
-  "functions": {
-    "api/index.py": {
-      "includeFiles": [
-        "templates/**",
-        "static/**",
-        "instance/**",
-        "uploads/**"
-      ]
-    }
-  },
   "rewrites": [
     {
       "source": "/(.*)",
-      "destination": "/api/index.py"
+      "destination": "/api/index"
     }
   ]
 }

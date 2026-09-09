@@ -10,6 +10,23 @@ if parent_dir not in sys.path:
 
 try:
     from app import app
+
+    @app.errorhandler(500)
+    def handle_internal_server_error(e):
+        return (
+            f"<!doctype html>"
+            f"<html><head><title>500 Internal Error</title>"
+            f"<style>body{{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;background:#0d1117;color:#c9d1d9;padding:40px;margin:0;}}"
+            f".container{{max-width:900px;margin:auto;background:#161b22;padding:30px;border-radius:8px;border:1px solid #30363d;}}"
+            f"h1{{color:#f85149;margin-top:0;font-size:22px;}}pre{{background:#0d1117;padding:20px;border-radius:6px;overflow-x:auto;color:#79c0ff;border:1px solid #21262d;font-size:14px;}}</style>"
+            f"</head><body><div class='container'>"
+            f"<h1>500 Internal Server Error</h1>"
+            f"<p>{str(e)}</p>"
+            f"<pre>{traceback.format_exc()}</pre>"
+            f"</div></body></html>",
+            500,
+            {'Content-Type': 'text/html; charset=utf-8'}
+        )
 except Exception as e:
     from flask import Flask
     err_trace = traceback.format_exc()
