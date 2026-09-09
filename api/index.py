@@ -11,6 +11,10 @@ if parent_dir not in sys.path:
 try:
     from app import app
 
+    @app.route('/api/health')
+    def health_check():
+        return "OK - System is healthy", 200
+
     @app.errorhandler(500)
     def handle_internal_server_error(e):
         return (
