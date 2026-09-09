@@ -1,6 +1,7 @@
 import os
 import sys
 import traceback
+from flask import Flask, jsonify
 
 # Add project root directory to Python path
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -8,48 +9,31 @@ parent_dir = os.path.dirname(current_dir)
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
+app = None
+init_error = None
+
 try:
-    from app import app
-
-    @app.route('/api/health')
-    def health_check():
-        return "OK - System is healthy", 200
-
-    @app.errorhandler(500)
-    def handle_internal_server_error(e):
-        return (
-            f"<!doctype html>"
-            f"<html><head><title>500 Internal Error</title>"
-            f"<style>body{{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;background:#0d1117;color:#c9d1d9;padding:40px;margin:0;}}"
-            f".container{{max-width:900px;margin:auto;background:#161b22;padding:30px;border-radius:8px;border:1px solid #30363d;}}"
-            f"h1{{color:#f85149;margin-top:0;font-size:22px;}}pre{{background:#0d1117;padding:20px;border-radius:6px;overflow-x:auto;color:#79c0ff;border:1px solid #21262d;font-size:14px;}}</style>"
-            f"</head><body><div class='container'>"
-            f"<h1>500 Internal Server Error</h1>"
-            f"<p>{str(e)}</p>"
-            f"<pre>{traceback.format_exc()}</pre>"
-            f"</div></body></html>",
-            500,
-            {'Content-Type': 'text/html; charset=utf-8'}
-        )
-except Exception as e:
-    from flask import Flask
-    err_trace = traceback.format_exc()
+    from app import app as real_app
+    app = real_app
+except Exception:
+    init_error = traceback.format_exc()
     app = Flask(__name__)
 
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
-    def error_diagnostics(path):
-        return (
-            f"<!doctype html>"
-            f"<html><head><title>Server Diagnostics</title>"
-            f"<style>body{{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;background:#0d1117;color:#c9d1d9;padding:40px;margin:0;}}"
-            f".container{{max-width:900px;margin:auto;background:#161b22;padding:30px;border-radius:8px;border:1px solid #30363d;}}"
-            f"h1{{color:#f85149;margin-top:0;font-size:22px;}}pre{{background:#0d1117;padding:20px;border-radius:6px;overflow-x:auto;color:#79c0ff;border:1px solid #21262d;font-size:14px;}}</style>"
-            f"</head><body><div class='container'>"
-            f"<h1>Serverless Initialization Error</h1>"
-            f"<p>An unexpected exception occurred when importing the application on Vercel:</p>"
-            f"<pre>{err_trace}</pre>"
-            f"</div></body></html>",
-            500,
-            {'Content-Type': 'text/html; charset=utf-8'}
-        )
+    def catch_all(path):
+        task_files = []
+        try:
+            for root, dirs, files in os.walk(parent_dir):
+                for f in files:
+                    task_files.append(os.path.relpath(os.path.join(root, f), parent_dir))
+        except Exception as e:
+            task_files.append(f"Walk error: {e}")
+
+        return jsonify({
+            "status": "init_error",
+            "error": init_error,
+            "parent_dir": parent_dir,
+            "sys_path": sys.path,
+            "files_found": sorted(task_files)
+        }), 500
