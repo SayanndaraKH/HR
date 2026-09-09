@@ -1,0 +1,14 @@
+services:
+  hrms-app:
+    build: .
+    container_name: cambodia-hrms
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - FLASK_DEBUG=false
+      - SECRET_KEY=cambodia-hrms-production-key-2026
+    volumes:
+      - ./instance:/app/instance
+      - ./uploads:/app/uploads

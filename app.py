@@ -11,8 +11,11 @@ from models import db, Department, Position, Employee, EmployeeDocument, Attenda
 from payroll_calculator import compute_employee_payroll, KHR_PER_USD
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'cambodia-hrms-secret-key-2026'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///hrms.db'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'cambodia-hrms-secret-key-2026')
+db_uri = os.environ.get('DATABASE_URL', 'sqlite:///hrms.db')
+if db_uri and db_uri.startswith('postgres://'):
+    db_uri = db_uri.replace('postgres://', 'postgresql://', 1)
+app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Upload folders
@@ -1993,4 +1996,6 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
         ensure_default_admin()
-    app.run(host='127.0.0.1', port=5000, debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    debug = os.environ.get('FLASK_DEBUG', 'True').lower() in ('true', '1')
+    app.run(host='0.0.0.0', port=port, debug=debug)
