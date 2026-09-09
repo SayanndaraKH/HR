@@ -10,10 +10,14 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from models import db, Department, Position, Employee, EmployeeDocument, Attendance, LeaveRequest, Payroll, Province, District, Commune, User, OFFICIAL_DEPARTMENTS, OFFICIAL_POSITIONS, OFFICIAL_POSITIONS_DATA
 from payroll_calculator import compute_employee_payroll, KHR_PER_USD
 
-app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'cambodia-hrms-secret-key-2026')
-
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+
+app = Flask(
+    __name__,
+    template_folder=os.path.join(BASE_DIR, 'templates'),
+    static_folder=os.path.join(BASE_DIR, 'static')
+)
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'cambodia-hrms-secret-key-2026')
 IS_VERCEL = bool(os.environ.get('VERCEL') or os.environ.get('AWS_LAMBDA_FUNCTION_NAME'))
 
 if IS_VERCEL:
