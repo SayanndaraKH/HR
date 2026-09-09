@@ -46,7 +46,11 @@ if IS_VERCEL:
                     df = os.path.join(dst_sub, f_name)
                     if os.path.isfile(sf) and not os.path.exists(df):
                         try:
-                            shutil.copy2(sf, df)
+                            shutil.copyfile(sf, df)
+                            try:
+                                os.chmod(df, 0o666)
+                            except Exception:
+                                pass
                         except Exception:
                             pass
 
@@ -55,9 +59,14 @@ if IS_VERCEL:
     bundled_db = os.path.join(BASE_DIR, 'instance', 'hrms.db')
     if os.path.exists(bundled_db) and not os.path.exists(db_file):
         try:
-            shutil.copy2(bundled_db, db_file)
+            shutil.copyfile(bundled_db, db_file)
         except Exception as e:
             print("Notice copying bundled db to tmp:", e)
+    if os.path.exists(db_file):
+        try:
+            os.chmod(db_file, 0o666)
+        except Exception:
+            pass
 
     DEFAULT_DB_URI = f"sqlite:///{db_file.replace(os.sep, '/')}"
 else:
@@ -2064,8 +2073,7 @@ def payroll_export_csv():
     )
 
 
-# Export handler for Vercel / WSGI Serverless
-handler = app
+
 
 
 if __name__ == '__main__':
