@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ប្រវត្តិរូបសង្ខេប - {{ emp.full_name_kh }} ({{ emp.emp_code }})</title>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Main Style -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        body {
+            background-color: #f1f5f9;
+            padding: 30px 16px;
+            display: block;
+            font-family: 'Kantumruy Pro', 'Battambang', serif;
+            color: #1e293b;
+        }
+
+        .cv-page-container {
+            max-width: 780px;
+            margin: 0 auto;
+            background: white;
+            padding: 48px 56px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            border-radius: 8px;
+            position: relative;
+            line-height: 1.95;
+            font-size: 14.5px;
+        }
+
+        .dotted-fill {
+            border-bottom: 1px dotted #334155;
+            display: inline-block;
+            font-weight: 700;
+            color: #0f172a;
+            padding: 0 4px;
+        }
+
+        .checkbox-box {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 15px;
+            height: 15px;
+            border: 1.5px solid #0f172a;
+            margin: 0 4px;
+            vertical-align: middle;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .photo-box {
+            position: absolute;
+            top: 48px;
+            right: 56px;
+            width: 115px;
+            height: 145px;
+            border: 1.5px solid #475569;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            background: #fafafa;
+            overflow: hidden;
+        }
+
+        .photo-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .photo-text {
+            font-size: 12px;
+            line-height: 1.4;
+            color: #64748b;
+        }
+
+        .cv-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .cv-header h2 {
+            font-size: 19px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+        }
+
+        .cv-header h3 {
+            font-size: 16px;
+            font-weight: 700;
+            margin-top: 2px;
+        }
+
+        .cv-title {
+            font-size: 22px;
+            font-weight: 800;
+            text-decoration: underline;
+            text-underline-offset: 5px;
+            margin-top: 14px;
+            margin-bottom: 24px;
+        }
+
+        @media print {
+            body {
+                background: white !important;
+                padding: 0 !important;
+            }
+            .action-bar {
+                display: none !important;
+            }
+            .cv-page-container {
+                box-shadow: none !important;
+                padding: 24px 32px !important;
+                max-width: 100% !important;
+                width: 100% !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Action Bar -->
+    <div class="action-bar" style="max-width: 780px; margin: 0 auto 20px; display: flex; justify-content: space-between; align-items: center;">
+        <a href="{{ url_for('employee_detail', emp_id=emp.id) }}" class="btn btn-secondary">
+            <i class="fa-solid fa-arrow-left"></i> ត្រឡប់ក្រោយ (Back)
+        </a>
+        <div style="display: flex; gap: 10px;">
+            <a href="{{ url_for('employee_edit', emp_id=emp.id) }}" class="btn btn-secondary">
+                <i class="fa-solid fa-pen-to-square"></i> កែប្រែព័ត៌មាន (Edit)
+            </a>
+            <button onclick="window.print()" class="btn btn-primary">
+                <i class="fa-solid fa-print"></i> បោះពុម្ពទម្រង់ផ្លូវការ (Print A4)
+            </button>
+        </div>
+    </div>
+
+    <!-- Official CV Document Paper (100% replica of doc/01.png) -->
+    <div class="cv-page-container">
+        <!-- 4x6 Photo Box on Top Right -->
+        <div class="photo-box">
+            {% if emp.avatar %}
+            <img src="{{ url_for('serve_upload', folder='avatars', filename=emp.avatar) }}" alt="រូបថត ៤x៦">
+            {% else %}
+            <div class="photo-text">
+                រូបថតបច្ចុប្បន្ន<br>
+                <strong>៤x៦</strong>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Header -->
+        <div class="cv-header">
+            <h2>ព្រះរាជាណាចក្រកម្ពុជា</h2>
+            <h3>ជាតិ សាសនា ព្រះមហាក្សត្រ</h3>
+            <div style="margin: 6px auto; width: 50px; border-bottom: 2px solid #0f172a;"></div>
+            <div class="cv-title">ប្រវត្តិរូបសង្ខេប</div>
+        </div>
+
+        <!-- Content Lines matching doc/01.png 100% -->
+        <div style="margin-top: 10px;">
+            <!-- Line 1: នាមត្រកូល នាមខ្លួន & ឡាតាំង -->
+            <div>
+                <span>នាមត្រកូល, នាមខ្លួន</span>
+                <span class="dotted-fill" style="min-width: 240px;">{{ emp.full_name_kh }}</span>
+                <span style="margin-left: 10px;">ជាអក្សរឡាតាំង</span>
+                <span class="dotted-fill" style="min-width: 200px;">{{ emp.full_name_en }}</span>
+            </div>
+
+            <!-- Line 2: ភេទ ជនជាតិ សញ្ជាតិ -->
+            <div>
+                <span>ភេទ</span>
+                <span class="dotted-fill" style="min-width: 90px; text-align: center;">{{ emp.gender }}</span>
+                <span style="margin-left: 16px;">ជនជាតិ</span>
+                <span class="dotted-fill" style="min-width: 140px; text-align: center;">{{ emp.ethnicity or 'ខ្មែរ' }}</span>
+                <span style="margin-left: 16px;">សញ្ជាតិ</span>
+                <span class="dotted-fill" style="min-width: 140px; text-align: center;">{{ emp.nationality or 'ខ្មែរ' }}</span>
+            </div>
+
+            <!-- Line 3: ថ្ងៃខែឆ្នាំកំណើត -->
+            <div>
+                <span>ថ្ងៃខែឆ្នាំកំណើត</span>
+                <span style="margin-left: 8px;">ថ្ងៃទី</span>
+                <span class="dotted-fill num" style="min-width: 40px; text-align: center;">{{ emp.dob.strftime('%d') if emp.dob else '...' }}</span>
+                <span style="margin-left: 8px;">ខែ</span>
+                <span class="dotted-fill num" style="min-width: 40px; text-align: center;">{{ emp.dob.strftime('%m') if emp.dob else '...' }}</span>
+                <span style="margin-left: 8px;">ឆ្នាំ</span>
+                <span class="dotted-fill num" style="min-width: 70px; text-align: center;">{{ emp.dob.strftime('%Y') if emp.dob else '...' }}</span>
+            </div>
+
+            <!-- Line 4: ទីកន្លែងកំណើត -->
+            <div>
+                <span>ទីកន្លែងកំណើត</span>
+                <span style="margin-left: 8px;">ភូមិ</span>
+                <span class="dotted-fill" style="min-width: 120px;">{{ emp.pob_village or '........................' }}</span>
+                <span style="margin-left: 8px;">ឃុំ/សង្កាត់</span>
+                <span class="dotted-fill" style="min-width: 150px;">{{ emp.pob_commune or '........................' }}</span>
+            </div>
+            <div style="padding-left: 85px;">
+                <span>ស្រុក/ខណ្ឌ</span>
+                <span class="dotted-fill" style="min-width: 160px;">{{ emp.pob_district or '........................' }}</span>
+                <span style="margin-left: 10px;">រាជធានី/ខេត្ត</span>
+                <span class="dotted-fill" style="min-width: 170px;">{{ emp.pob_province or '........................' }}</span>
+            </div>
+
+            <!-- Line 5: កម្រិតវប្បធម៌សិក្សា & ឯកទេស -->
+            <div>
+                <span>កម្រិតវប្បធម៌សិក្សា</span>
+                <span class="dotted-fill" style="min-width: 220px;">{{ emp.education_level or '..........................................' }}</span>
+                <span style="margin-left: 10px;">ឯកទេស</span>
+                <span class="dotted-fill" style="min-width: 180px;">{{ emp.education_major or '..........................................' }}</span>
+            </div>
+
+            <!-- Line 6: ចំណេះដឹងភាសាបរទេស -->
+            <div>
+                <span>ចំណេះដឹងភាសាបរទេស</span>
+                <span class="dotted-fill" style="min-width: 480px;">{{ emp.foreign_languages or '........................................................................................................' }}</span>
+            </div>
+
+            <!-- Line 7: មុខជំនាញផ្សេងៗ -->
+            <div>
+                <span>មុខជំនាញផ្សេងៗ</span>
+                <span class="dotted-fill" style="min-width: 530px;">{{ emp.other_skills or '................................................................................................................' }}</span>
+            </div>
+
+            <!-- Line 8: ស្ថានភាពគ្រួសារ -->
+            <div>
+                <span>ស្ថានភាពគ្រួសារ</span>
+                <span style="margin-left: 30px;">
+                    <span class="checkbox-box">{% if emp.marital_status == 'នៅលីវ' %}&#10003;{% endif %}</span> នៅលីវ
+                </span>
+                <span style="margin-left: 50px;">
+                    <span class="checkbox-box">{% if emp.marital_status == 'មានប្តី ឬប្រពន្ធ' %}&#10003;{% endif %}</span> មានប្តី ឬប្រពន្ធ
+                </span>
+            </div>
+
+            <!-- Line 9: បទពិសោធន៍ការងារ -->
+            <div>
+                <span>បទពិសោធន៍ការងារ</span>
+                <span style="margin-left: 10px;">១.</span>
+                <span class="dotted-fill" style="min-width: 470px;">{{ emp.work_experience_1 or '..................................................................................................................' }}</span>
+            </div>
+            <div style="padding-left: 130px;">
+                <span>២.</span>
+                <span class="dotted-fill" style="min-width: 480px;">{{ emp.work_experience_2 or '..................................................................................................................' }}</span>
+            </div>
+            <div style="padding-left: 130px;">
+                <span>៣.</span>
+                <span class="dotted-fill" style="min-width: 480px;">{{ emp.work_experience_3 or '..................................................................................................................' }}</span>
+            </div>
+
+            <!-- Line 10: ឪពុកឈ្មោះ -->
+            <div>
+                <span>ឪពុកឈ្មោះ</span>
+                <span class="dotted-fill" style="min-width: 150px;">{{ emp.father_name or '....................................' }}</span>
+                <span style="margin-left: 8px;">អាយុ</span>
+                <span class="dotted-fill num" style="min-width: 40px; text-align: center;">{{ emp.father_age or '...' }}</span>
+                <span style="margin-left: 8px;">ជនជាតិ</span>
+                <span class="dotted-fill" style="min-width: 80px; text-align: center;">{{ emp.father_nationality or 'ខ្មែរ' }}</span>
+                <span style="margin-left: 10px;">
+                    <span class="checkbox-box">{% if emp.father_status == 'ស្លាប់' %}&#10003;{% endif %}</span> ស្លាប់
+                </span>
+                <span style="margin-left: 10px;">
+                    <span class="checkbox-box">{% if emp.father_status != 'ស្លាប់' %}&#10003;{% endif %}</span> រស់
+                </span>
+            </div>
+            <div>
+                <span>មុខរបរ</span>
+                <span class="dotted-fill" style="min-width: 590px;">{{ emp.father_job or '....................................................................................................................................' }}</span>
+            </div>
+
+            <!-- Line 11: ម្តាយឈ្មោះ -->
+            <div>
+                <span>ម្តាយឈ្មោះ</span>
+                <span class="dotted-fill" style="min-width: 150px;">{{ emp.mother_name or '....................................' }}</span>
+                <span style="margin-left: 8px;">អាយុ</span>
+                <span class="dotted-fill num" style="min-width: 40px; text-align: center;">{{ emp.mother_age or '...' }}</span>
+                <span style="margin-left: 8px;">ជនជាតិ</span>
+                <span class="dotted-fill" style="min-width: 80px; text-align: center;">{{ emp.mother_nationality or 'ខ្មែរ' }}</span>
+                <span style="margin-left: 10px;">
+                    <span class="checkbox-box">{% if emp.mother_status == 'ស្លាប់' %}&#10003;{% endif %}</span> ស្លាប់
+                </span>
+                <span style="margin-left: 10px;">
+                    <span class="checkbox-box">{% if emp.mother_status != 'ស្លាប់' %}&#10003;{% endif %}</span> រស់
+                </span>
+            </div>
+            <div>
+                <span>មុខរបរ</span>
+                <span class="dotted-fill" style="min-width: 590px;">{{ emp.mother_job or '....................................................................................................................................' }}</span>
+            </div>
+
+            <!-- Line 12: អាសយដ្ឋានបច្ចុប្បន្ន -->
+            <div>
+                <span>អាសយដ្ឋានបច្ចុប្បន្ន ផ្ទះលេខ</span>
+                <span class="dotted-fill" style="min-width: 60px; text-align: center;">{{ emp.current_house_no or '........' }}</span>
+                <span style="margin-left: 6px;">ផ្លូវលេខ</span>
+                <span class="dotted-fill" style="min-width: 80px; text-align: center;">{{ emp.current_street_no or '........' }}</span>
+                <span style="margin-left: 6px;">ភូមិ</span>
+                <span class="dotted-fill" style="min-width: 110px;">{{ emp.current_village or '........................' }}</span>
+            </div>
+            <div style="padding-left: 10px;">
+                <span>ឃុំ/សង្កាត់</span>
+                <span class="dotted-fill" style="min-width: 140px;">{{ emp.current_commune or '........................' }}</span>
+                <span style="margin-left: 6px;">ស្រុក/ខណ្ឌ</span>
+                <span class="dotted-fill" style="min-width: 140px;">{{ emp.current_district or '........................' }}</span>
+                <span style="margin-left: 6px;">រាជធានី/ខេត្ត</span>
+                <span class="dotted-fill" style="min-width: 140px;">{{ emp.current_province or '........................' }}</span>
+            </div>
+
+            <!-- Line 13: លេខទូរស័ព្ទ ÷ ... អ៊ីម៉ែល -->
+            <div>
+                <span>លេខទូរស័ព្ទ ÷</span>
+                <span class="dotted-fill num" style="min-width: 220px;">{{ emp.phone or '................................................' }}</span>
+                <span style="margin-left: 12px;">អ៊ីម៉ែល</span>
+                <span class="dotted-fill num" style="min-width: 250px;">{{ emp.email or '................................................' }}</span>
+            </div>
+
+            <!-- Declaration Statement matching doc/01.png -->
+            <div style="margin-top: 22px; text-indent: 40px; text-align: justify; font-size: 14px; line-height: 1.8;">
+                ខ្ញុំបាទ/នាងខ្ញុំ សូមធានាទទួលខុសត្រូវចំពោះមុខច្បាប់ថា ព័ត៌មានខាងលើ និងឯកសារភ្ជាប់ទាំងអស់ ពិតជាត្រឹមត្រូវពិតប្រាកដមែន។
+            </div>
+
+            <!-- Date & Signature Block matching doc/01.png -->
+            <div style="margin-top: 28px; text-align: right; padding-right: 20px;">
+                <div>
+                    <span>ធ្វើនៅ</span>
+                    <span class="dotted-fill" style="min-width: 100px; text-align: center;">ភ្នំពេញ</span>
+                    <span>, ថ្ងៃទី</span>
+                    <span class="dotted-fill num" style="min-width: 30px; text-align: center;">{{ today.strftime('%d') }}</span>
+                    <span>ខែ</span>
+                    <span class="dotted-fill num" style="min-width: 30px; text-align: center;">{{ today.strftime('%m') }}</span>
+                    <span>ឆ្នាំ ២០</span>
+                    <span class="dotted-fill num" style="min-width: 25px; text-align: center;">{{ today.strftime('%y') }}</span>
+                </div>
+                <div style="margin-top: 6px; font-weight: 700; padding-right: 40px;">
+                    ហត្ថលេខា និងឈ្មោះសាមីខ្លួន
+                </div>
+                <div style="margin-top: 55px; font-weight: 700; font-size: 15px; color: #0f172a; padding-right: 45px;">
+                    {{ emp.full_name_kh }}
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

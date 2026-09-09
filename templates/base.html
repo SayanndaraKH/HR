@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ប្រព័ន្ធគ្រប់គ្រងធនធានមនុស្ស (HRMS){% endblock %}</title>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Main Style -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="app-wrapper">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="brand-logo">
+                    <i class="fa-solid fa-users-gear"></i>
+                </div>
+                <div class="brand-text">
+                    <h1>HRMS កម្ពុជា</h1>
+                    <span>Human Resource</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>ផ្ទាំងព័ត៌មាន (Dashboard)</span>
+                </a>
+
+                <div class="nav-section-title">ផ្នែកទី ១: បុគ្គលិក</div>
+                <a href="{{ url_for('employee_list') }}" class="nav-link {% if 'employee' in request.endpoint and request.endpoint != 'employee_create' %}active{% endif %}">
+                    <i class="fa-solid fa-id-card-clip"></i>
+                    <span>បញ្ជីបុគ្គលិក (Employees)</span>
+                </a>
+                <a href="{{ url_for('employee_create') }}" class="nav-link {% if request.endpoint == 'employee_create' %}active{% endif %}">
+                    <i class="fa-solid fa-user-plus"></i>
+                    <span>បន្ថែមបុគ្គលិកថ្មី (New)</span>
+                </a>
+
+                <div class="nav-section-title">ផ្នែកទី ២: វត្តមាន & ច្បាប់</div>
+                <a href="{{ url_for('attendance_daily') }}" class="nav-link {% if request.endpoint == 'attendance_daily' %}active{% endif %}">
+                    <i class="fa-solid fa-calendar-check"></i>
+                    <span>វត្តមានប្រចាំថ្ងៃ (Daily)</span>
+                </a>
+                <a href="{{ url_for('attendance_leaves') }}" class="nav-link {% if request.endpoint == 'attendance_leaves' %}active{% endif %}">
+                    <i class="fa-solid fa-envelope-open-text"></i>
+                    <span>ច្បាប់ឈប់សម្រាក (Leaves)</span>
+                    {% if pending_leaves_count > 0 %}
+                    <span class="nav-badge">{{ pending_leaves_count }}</span>
+                    {% endif %}
+                </a>
+                <a href="{{ url_for('attendance_report') }}" class="nav-link {% if request.endpoint == 'attendance_report' %}active{% endif %}">
+                    <i class="fa-solid fa-clipboard-user"></i>
+                    <span>របាយការណ៍វត្តមាន (Report)</span>
+                </a>
+
+                <div class="nav-section-title">ផ្នែកទី ៣: ប្រាក់បៀវត្ស</div>
+                <a href="{{ url_for('payroll_list') }}" class="nav-link {% if request.endpoint == 'payroll_list' %}active{% endif %}">
+                    <i class="fa-solid fa-file-invoice-dollar"></i>
+                    <span>គ្រប់គ្រងប្រាក់ខែ (Payroll)</span>
+                </a>
+                <a href="{{ url_for('payroll_report') }}" class="nav-link {% if request.endpoint == 'payroll_report' %}active{% endif %}">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span>របាយការណ៍ចំណាយ (Expense)</span>
+                </a>
+
+                {% if current_user and current_user.role == 'admin' %}
+                <div class="nav-section-title">ប្រព័ន្ធ & អ្នកប្រើប្រាស់</div>
+                <a href="{{ url_for('user_list') }}" class="nav-link {% if request.endpoint == 'user_list' %}active{% endif %}">
+                    <i class="fa-solid fa-users-gear"></i>
+                    <span>គ្រប់គ្រងអ្នកប្រើ (Users)</span>
+                    {% if pending_users_count > 0 %}
+                    <span class="nav-badge" style="background: #f59e0b;">{{ pending_users_count }}</span>
+                    {% endif %}
+                </a>
+                <a href="{{ url_for('organization_manage') }}" class="nav-link {% if request.endpoint == 'organization_manage' %}active{% endif %}">
+                    <i class="fa-solid fa-sitemap"></i>
+                    <span>រចនាសម្ព័ន្ធ & តួនាទី (Org)</span>
+                </a>
+                <a href="{{ url_for('geo_locations') }}" class="nav-link {% if request.endpoint == 'geo_locations' %}active{% endif %}">
+                    <i class="fa-solid fa-map-location-dot"></i>
+                    <span>ទិន្នន័យភូមិសាស្ត្រ (Locations)</span>
+                </a>
+                {% else %}
+                <div class="nav-section-title">ទិន្នន័យទូទៅ</div>
+                <a href="{{ url_for('geo_locations') }}" class="nav-link {% if request.endpoint == 'geo_locations' %}active{% endif %}">
+                    <i class="fa-solid fa-map-location-dot"></i>
+                    <span>ទិន្នន័យភូមិសាស្ត្រ (Locations)</span>
+                </a>
+                {% endif %}
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-avatar-sm" style="background: linear-gradient(135deg, {% if current_user and current_user.role == 'admin' %}#ef4444, #dc2626{% elif current_user and current_user.role == 'hr' %}#4f46e5, #4338ca{% elif current_user and current_user.role == 'accountant' %}#10b981, #059669{% else %}#64748b, #475569{% endif %}); color: #ffffff; font-weight: bold; font-family: var(--font-en);">
+                    {{ current_user.username[:2].upper() if current_user else 'HR' }}
+                </div>
+                <div class="user-meta" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0;">
+                    <h4 style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ current_user.employee_name if current_user else 'រដ្ឋបាល HR Admin' }}</h4>
+                    <p>{{ current_user.role_badge.kh if current_user else 'គ្រប់គ្រងប្រព័ន្ធ' }}</p>
+                </div>
+                {% if current_user %}
+                <a href="{{ url_for('logout') }}" title="ចាកចេញ (Logout)" style="color: #ef4444; padding: 6px 8px; border-radius: 6px; font-size: 15px; text-decoration: none;" onmouseover="this.style.background='rgba(239,68,68,0.15)'" onmouseout="this.style.background='transparent'">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                </a>
+                {% endif %}
+            </div>
+        </aside>
+
+        <!-- Main Wrapper -->
+        <div class="main-wrapper">
+            <!-- Top Navbar -->
+            <header class="topbar">
+                <div class="topbar-left">
+                    <div class="page-title-wrap">
+                        <h2>{% block page_title %}ប្រព័ន្ធគ្រប់គ្រងធនធានមនុស្ស{% endblock %}</h2>
+                        <p>{% block page_subtitle %}គ្រប់គ្រងបុគ្គលិក វត្តមាន និងប្រាក់បៀវត្សតាមស្ដង់ដារកម្ពុជា{% endblock %}</p>
+                    </div>
+                </div>
+
+                <div class="topbar-right">
+                    <div class="current-date-badge">
+                        <i class="fa-regular fa-calendar text-primary"></i>
+                        <span>ថ្ងៃនេះ៖ <strong class="num">{{ today.strftime('%d/%m/%Y') }}</strong></span>
+                    </div>
+
+                    {% if current_user %}
+                    <div style="display: flex; align-items: center; gap: 8px; background: #ffffff; padding: 5px 10px 5px 6px; border-radius: 9999px; border: 1px solid var(--card-border); box-shadow: var(--shadow-sm);">
+                        <div style="width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, {% if current_user.role == 'admin' %}#ef4444, #dc2626{% elif current_user.role == 'hr' %}#4f46e5, #4338ca{% elif current_user.role == 'accountant' %}#10b981, #059669{% else %}#64748b, #475569{% endif %}); color: white; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; font-family: var(--font-en);">
+                            {{ current_user.username[:2].upper() }}
+                        </div>
+                        <span style="font-size: 13px; font-weight: 600; color: var(--text-main);">{{ current_user.employee_name }}</span>
+                        <span class="badge {{ current_user.role_badge.class }}" style="font-size: 10.5px; padding: 2px 6px;">{{ current_user.role_badge.en }}</span>
+                        <a href="{{ url_for('logout') }}" title="ចាកចេញ (Logout)" class="btn btn-sm" style="background: #fef2f2; color: #ef4444; border: 1px solid #fecaca; padding: 4px 8px; border-radius: 6px; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                            <span>ចាកចេញ</span>
+                        </a>
+                    </div>
+                    {% endif %}
+
+                    {% block topbar_actions %}{% endblock %}
+                </div>
+            </header>
+
+            <!-- Alerts / Flashes -->
+            <div class="flash-container">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }}">
+                                <span><i class="fa-solid fa-circle-info" style="margin-right: 8px;"></i>{{ message }}</span>
+                                <button type="button" class="close-alert" onclick="this.parentElement.remove();">&times;</button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+            </div>
+
+            <!-- Page Body -->
+            <main class="content-body">
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+
+    <!-- Main JS -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

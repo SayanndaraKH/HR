@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+
+{% block title %}ទិន្នន័យភូមិសាស្ត្រ និងរដ្ឋបាលកម្ពុជា - HRMS{% endblock %}
+
+{% block page_title %}ទិន្នន័យភូមិសាស្ត្ររដ្ឋបាលកម្ពុជា (Cambodia Administrative Divisions){% endblock %}
+{% block page_subtitle %}គ្រប់គ្រងទិន្នន័យ ២៥ រាជធានី-ខេត្ត, ២១០ ក្រុង-ស្រុក-ខណ្ឌ, និង ១,៦៦១ ឃុំ-សង្កាត់ ពី CambodiaCommuneList2025.csv{% endblock %}
+
+{% block topbar_actions %}
+<form method="POST" action="{{ url_for('geo_locations_sync') }}" style="display: inline;" 
+      onsubmit="return confirm('តើលោកអ្នកពិតជាចង់អាន និងធ្វើបច្ចុប្បន្នភាពទិន្នន័យឡើងវិញពី CambodiaCommuneList2025.csv មែនទេ?');">
+    <button type="submit" class="btn btn-primary">
+        <i class="fa-solid fa-arrows-rotate"></i> ធ្វើបច្ចុប្បន្នភាពពី CSV (Sync CSV)
+    </button>
+</form>
+{% endblock %}
+
+{% block content %}
+<!-- KPI Stats Row -->
+<div class="stats-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 24px;">
+    <div class="stat-card">
+        <div class="stat-icon icon-primary">
+            <i class="fa-solid fa-map"></i>
+        </div>
+        <div class="stat-info">
+            <div class="stat-value num">{{ total_provinces }}</div>
+            <div class="stat-label">រាជធានី / ខេត្ត (Provinces)</div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">២៤ ខេត្ត + ១ រាជធានី</div>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon icon-success">
+            <i class="fa-solid fa-landmark"></i>
+        </div>
+        <div class="stat-info">
+            <div class="stat-value num">{{ total_districts }}</div>
+            <div class="stat-label">ក្រុង / ស្រុក / ខណ្ឌ (Districts)</div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">ស្រុក, ខណ្ឌ និងក្រុងផ្លូវការ</div>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon icon-info">
+            <i class="fa-solid fa-building-flag"></i>
+        </div>
+        <div class="stat-info">
+            <div class="stat-value num">{{ total_communes }}</div>
+            <div class="stat-label">ឃុំ / សង្កាត់ (Communes)</div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">តាមបញ្ជីរដ្ឋបាលឆ្នាំ ២០២៥</div>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon icon-warning">
+            <i class="fa-solid fa-file-csv"></i>
+        </div>
+        <div class="stat-info">
+            <div class="stat-value" style="font-size: 18px; font-weight: 700; color: var(--primary);">2025 CSV</div>
+            <div class="stat-label">ឯកសារប្រភព (Source File)</div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="doc/CambodiaCommuneList2025.csv">
+                doc/CambodiaCommuneList2025.csv
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search and Filter Bar -->
+<div class="card" style="margin-bottom: 24px; padding: 20px 24px;">
+    <form method="GET" action="{{ url_for('geo_locations') }}" class="filter-bar" style="display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap;">
+        <div class="form-group" style="flex: 1.2; min-width: 200px; margin-bottom: 0;">
+            <label class="form-label" style="font-size: 12.5px;">ជ្រើសរើសខេត្ត/រាជធានី (Province)</label>
+            <select name="province_code" id="filter_province" class="form-select" onchange="updateFilterDistricts(this.value)">
+                <option value="">-- ទាំងអស់ (All Provinces) --</option>
+                {% for p in provinces %}
+                <option value="{{ p.code }}" {% if selected_province == p.code %}selected{% endif %}>
+                    [{{ p.code }}] {{ p.name_kh }} ({{ p.name_en }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group" style="flex: 1.2; min-width: 200px; margin-bottom: 0;">
+            <label class="form-label" style="font-size: 12.5px;">ជ្រើសរើសស្រុក/ខណ្ឌ (District)</label>
+            <select name="district_code" id="filter_district" class="form-select">
+                <option value="">-- ទាំងអស់ (All Districts) --</option>
+                {% for d in districts %}
+                <option value="{{ d.code }}" {% if selected_district == d.code %}selected{% endif %}>
+                    [{{ d.code }}] {{ d.name_kh }} ({{ d.name_en }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group" style="flex: 1.5; min-width: 220px; margin-bottom: 0;">
+            <label class="form-label" style="font-size: 12.5px;">ស្វែងរកឃុំ/សង្កាត់/ស្រុក/ខេត្ត (Search)</label>
+            <div class="search-input-wrap">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" name="search" class="form-control" placeholder="ឈ្មោះ ឬលេខកូដរដ្ឋបាល..." value="{{ search }}">
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+            <button type="submit" class="btn btn-primary">
+                <i class="fa-solid fa-filter"></i> ស្វែងរក
+            </button>
+            <a href="{{ url_for('geo_locations') }}" class="btn btn-secondary">
+                <i class="fa-solid fa-rotate-left"></i> សម្អាត
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- Locations Table Card -->
+<div class="card">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; padding: 18px 24px; border-bottom: 1px solid var(--card-border);">
+        <div style="font-size: 15px; font-weight: 700; color: var(--text-main);">
+            <i class="fa-solid fa-list-ul text-primary"></i> បញ្ជីឃុំ សង្កាត់ ក្រុង ស្រុក ខណ្ឌ និងខេត្ត
+            <span class="badge badge-primary num" style="margin-left: 8px;">{{ pagination.total }} លទ្ធផល</span>
+        </div>
+        <div style="font-size: 13px; color: var(--text-muted);">
+            ទំព័រទី <strong class="num">{{ pagination.page }}</strong> នៃ <strong class="num">{{ pagination.pages }}</strong>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th style="width: 130px;">កូដឃុំ (Code)</th>
+                    <th>ឃុំ / សង្កាត់ (Commune - Khmer)</th>
+                    <th>ឈ្មោះឡាតាំង (Latin Name)</th>
+                    <th>ក្រុង / ស្រុក / ខណ្ឌ (District)</th>
+                    <th>រាជធានី / ខេត្ត (Province)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if communes %}
+                    {% for c in communes %}
+                    <tr>
+                        <td>
+                            <span class="badge badge-secondary num" style="font-family: var(--font-en); font-weight: 700; font-size: 12px; letter-spacing: 0.5px;">
+                                {{ c.code }}
+                            </span>
+                        </td>
+                        <td>
+                            <strong style="color: #0f172a; font-size: 14.5px;">{{ c.name_kh }}</strong>
+                        </td>
+                        <td>
+                            <span style="font-family: var(--font-en); color: #475569; font-weight: 600;">{{ c.name_en }}</span>
+                        </td>
+                        <td>
+                            <div style="font-weight: 600; color: #1e293b;">{{ c.district.name_kh if c.district else '-' }}</div>
+                            <div style="font-size: 11.5px; color: var(--text-muted); font-family: var(--font-en);">{{ c.district.name_en if c.district else '' }}</div>
+                        </td>
+                        <td>
+                            <span class="badge badge-info" style="font-size: 12.5px; padding: 4px 10px;">
+                                <i class="fa-solid fa-location-dot" style="margin-right: 4px;"></i>
+                                {{ c.district.province.name_kh if c.district and c.district.province else '-' }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                            <i class="fa-regular fa-folder-open" style="font-size: 36px; margin-bottom: 12px; display: block; color: #cbd5e1;"></i>
+                            មិនមានទិន្នន័យភូមិសាស្ត្រត្រូវនឹងការស្វែងរកនេះទេ!
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination Footer -->
+    {% if pagination.pages > 1 %}
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; border-top: 1px solid var(--card-border);">
+        <div style="font-size: 13px; color: var(--text-muted);">
+            បង្ហាញពី <strong class="num">{{ (pagination.page - 1) * pagination.per_page + 1 }}</strong> ដល់ 
+            <strong class="num">{{ [pagination.page * pagination.per_page, pagination.total]|min }}</strong> នៃ 
+            <strong class="num">{{ pagination.total }}</strong> ឃុំ/សង្កាត់
+        </div>
+
+        <div style="display: flex; gap: 6px;">
+            {% if pagination.has_prev %}
+            <a href="{{ url_for('geo_locations', page=pagination.prev_num, province_code=selected_province, district_code=selected_district, search=search) }}" 
+               class="btn btn-sm btn-secondary">
+                <i class="fa-solid fa-chevron-left"></i> មុន
+            </a>
+            {% endif %}
+
+            {% for p in pagination.iter_pages(left_edge=2, left_current=2, right_current=2, right_edge=2) %}
+                {% if p %}
+                    {% if p == pagination.page %}
+                    <span class="btn btn-sm btn-primary num" style="font-weight: 700;">{{ p }}</span>
+                    {% else %}
+                    <a href="{{ url_for('geo_locations', page=p, province_code=selected_province, district_code=selected_district, search=search) }}" 
+                       class="btn btn-sm btn-secondary num">{{ p }}</a>
+                    {% endif %}
+                {% else %}
+                    <span style="padding: 6px 8px; color: var(--text-muted);">...</span>
+                {% endif %}
+            {% endfor %}
+
+            {% if pagination.has_next %}
+            <a href="{{ url_for('geo_locations', page=pagination.next_num, province_code=selected_province, district_code=selected_district, search=search) }}" 
+               class="btn btn-sm btn-secondary">
+                បន្ទាប់ <i class="fa-solid fa-chevron-right"></i>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function updateFilterDistricts(provinceCode) {
+        const districtSelect = document.getElementById('filter_district');
+        districtSelect.innerHTML = '<option value="">-- កំពុងផ្ទុក... --</option>';
+        
+        if (!provinceCode) {
+            districtSelect.innerHTML = '<option value="">-- ទាំងអស់ (All Districts) --</option>';
+            return;
+        }
+
+        try {
+            const res = await fetch(`/api/geo/districts?province_code=${provinceCode}`);
+            const data = await res.json();
+            
+            districtSelect.innerHTML = '<option value="">-- ទាំងអស់ (All Districts) --</option>';
+            data.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d.code;
+                opt.textContent = `[${d.code}] ${d.name_kh} (${d.name_en})`;
+                districtSelect.appendChild(opt);
+            });
+        } catch (e) {
+            console.error('Error fetching districts:', e);
+            districtSelect.innerHTML = '<option value="">-- បរាជ័យក្នុងការផ្ទុក --</option>';
+        }
+    }
+</script>
+{% endblock %}

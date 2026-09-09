@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}របាយការណ៍វត្តមានប្រចាំខែ (Monthly Attendance Summary) - HRMS{% endblock %}
+{% block page_title %}របាយការណ៍វត្តមានប្រចាំខែ (Monthly Attendance Report){% endblock %}
+{% block page_subtitle %}សរុបចំនួនថ្ងៃធ្វើការជាក់ស្តែង ថ្ងៃឈប់ច្បាប់ អវត្តមាន ម៉ោងយឺត និងម៉ោងថែម (OT) សម្រាប់បុគ្គលិកម្នាក់ៗ{% endblock %}
+
+{% block topbar_actions %}
+    <a href="{{ url_for('attendance_export_csv', month=selected_month) }}" class="btn btn-success">
+        <i class="fa-solid fa-file-excel"></i> នាំចេញជា CSV (Export)
+    </a>
+{% endblock %}
+
+{% block content %}
+<!-- Filter Bar -->
+<div class="filter-bar">
+    <form method="GET" action="{{ url_for('attendance_report') }}" style="display: flex; flex-wrap: wrap; gap: 14px; align-items: center; width: 100%; justify-content: space-between;">
+        <div class="filter-group">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <label class="form-label" style="margin: 0; white-space: nowrap;"><i class="fa-regular fa-calendar"></i> ប្រចាំខែ/ឆ្នាំ៖</label>
+                <input type="month" name="month" value="{{ selected_month }}" class="form-control" style="width: 170px;" onchange="this.form.submit()">
+            </div>
+
+            <select name="department_id" class="form-select" style="width: 220px;" onchange="this.form.submit()">
+                <option value="">-- ការិយាល័យទាំងអស់ --</option>
+                {% for d in departments %}
+                <option value="{{ d.id }}" {% if selected_dept == d.id %}selected{% endif %}>{{ d.name_kh }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div style="font-size: 13.5px; color: var(--text-muted);">
+            ទិន្នន័យត្រូវបានបូកសរុបដោយស្វ័យប្រវត្តិដើម្បីត្រៀមបញ្ជូនទៅគណនាប្រាក់បៀវត្ស
+        </div>
+    </form>
+</div>
+
+<!-- Attendance Summary Table -->
+<div class="card" style="padding: 0; overflow: hidden;">
+    <div class="table-responsive">
+        <table class="table-custom">
+            <thead>
+                <tr>
+                    <th>កូដ & បុគ្គលិក</th>
+                    <th>ការិយាល័យ</th>
+                    <th style="text-align: center;">ថ្ងៃធ្វើការជាក់ស្តែង</th>
+                    <th style="text-align: center;">ថ្ងៃឈប់ច្បាប់</th>
+                    <th style="text-align: center;">អវត្តមាន</th>
+                    <th style="text-align: center;">មកយឺត (ដង / នាទី)</th>
+                    <th style="text-align: center;">ម៉ោងថែម (OT)</th>
+                    <th style="text-align: center;">ម៉ោងសរុប</th>
+                    <th style="text-align: right;">សកម្មភាព</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in report_data %}
+                {% set emp = row.employee %}
+                <tr>
+                    <td>
+                        <div class="emp-profile-tag">
+                            <div class="emp-avatar" style="width: 36px; height: 36px; font-size: 13px;">
+                                {{ emp.full_name_en[:2].upper() }}
+                            </div>
+                            <div>
+                                <a href="{{ url_for('employee_detail', emp_id=emp.id) }}" class="emp-name-text">
+                                    {{ emp.full_name_kh }}
+                                </a>
+                                <span class="emp-sub-text num">{{ emp.emp_code }} • {{ emp.position }}</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td>{{ emp.department.name_kh }}</td>
+                    <td style="text-align: center;">
+                        <span class="badge badge-success num" style="font-size: 13px;">{{ row.worked_days }} ថ្ងៃ</span>
+                    </td>
+                    <td style="text-align: center;">
+                        {% if row.leave_days > 0 %}
+                        <span class="badge badge-purple num">{{ row.leave_days }} ថ្ងៃ</span>
+                        {% else %}
+                        <span class="num" style="color: #94a3b8;">0</span>
+                        {% endif %}
+                    </td>
+                    <td style="text-align: center;">
+                        {% if row.absent_days > 0 %}
+                        <span class="badge badge-danger num">{{ row.absent_days }} ថ្ងៃ</span>
+                        {% else %}
+                        <span class="num" style="color: #94a3b8;">0</span>
+                        {% endif %}
+                    </td>
+                    <td style="text-align: center;">
+                        {% if row.late_days > 0 %}
+                        <span class="badge badge-warning num">{{ row.late_days }} ដង ({{ row.total_late_min }}mn)</span>
+                        {% else %}
+                        <span class="num" style="color: #059669;"><i class="fa-solid fa-check"></i> ទៀងទាត់</span>
+                        {% endif %}
+                    </td>
+                    <td style="text-align: center;">
+                        {% if row.total_ot > 0 %}
+                        <strong class="num" style="color: var(--primary); font-size: 14px;">+{{ row.total_ot }} ម៉ោង</strong>
+                        {% else %}
+                        <span class="num" style="color: #94a3b8;">-</span>
+                        {% endif %}
+                    </td>
+                    <td style="text-align: center;">
+                        <strong class="num">{{ row.total_work_hours }}h</strong>
+                    </td>
+                    <td style="text-align: right;">
+                        <a href="{{ url_for('employee_detail', emp_id=emp.id) }}" class="btn btn-sm btn-secondary" title="មើលប្រវត្តិ">
+                            <i class="fa-solid fa-eye"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

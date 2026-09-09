@@ -1,0 +1,354 @@
+{% extends "base.html" %}
+
+{% block title %}ព័ត៌មានលម្អិតបុគ្គលិក - {{ emp.full_name_kh }} ({{ emp.emp_code }}){% endblock %}
+{% block page_title %}ព័ត៌មានលម្អិតបុគ្គលិក (Employee Profile 360°){% endblock %}
+{% block page_subtitle %}គ្រប់គ្រងព័ត៌មានទូទៅ ឯកសារកិច្ចសន្យា វត្តមានការងារ និងប្រាក់បៀវត្ស{% endblock %}
+
+{% block topbar_actions %}
+    <a href="{{ url_for('employee_official_cv', emp_id=emp.id) }}" target="_blank" class="btn btn-purple btn-sm">
+        <i class="fa-solid fa-file-contract"></i> មើលទម្រង់ប្រវត្តិរូបផ្លូវការ (Official CV)
+    </a>
+    <a href="{{ url_for('employee_edit', emp_id=emp.id) }}" class="btn btn-primary btn-sm">
+        <i class="fa-solid fa-pen-to-square"></i> កែប្រែព័ត៌មាន
+    </a>
+    <a href="{{ url_for('employee_list') }}" class="btn btn-secondary btn-sm">
+        <i class="fa-solid fa-arrow-left"></i> បញ្ជីបុគ្គលិក
+    </a>
+{% endblock %}
+
+{% block content %}
+<!-- Top Employee Summary Profile Card -->
+<div class="card" style="background: linear-gradient(135deg, #ffffff, #f8fafc); border-left: 5px solid var(--primary);">
+    <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 24px;">
+        <div style="display: flex; align-items: center; gap: 20px;">
+            {% if emp.avatar %}
+            <img src="{{ url_for('serve_upload', folder='avatars', filename=emp.avatar) }}" alt="{{ emp.full_name_kh }}" 
+                 style="width: 85px; height: 85px; border-radius: 50%; object-fit: cover; border: 3px solid white; box-shadow: var(--shadow-md);">
+            {% else %}
+            <div style="width: 85px; height: 85px; border-radius: 50%; background: linear-gradient(135deg, #4f46e5, #06b6d4); color: white; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 800; box-shadow: var(--shadow-md);">
+                {{ emp.full_name_en[:2].upper() }}
+            </div>
+            {% endif %}
+
+            <div>
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 4px;">
+                    <h2 style="font-size: 22px; font-weight: 800; color: #0f172a;">{{ emp.full_name_kh }}</h2>
+                    <span class="badge {{ emp.status_badge.class }}">{{ emp.status_badge.kh }}</span>
+                </div>
+                <div style="font-size: 14px; color: var(--text-muted); font-family: var(--font-en); font-weight: 600;">
+                    {{ emp.emp_code }} • {{ emp.full_name_en }} ({{ emp.gender }}) • ជនជាតិ៖ {{ emp.ethnicity or 'ខ្មែរ' }}
+                </div>
+                <div style="font-size: 13.5px; color: var(--primary); font-weight: 600; margin-top: 4px;">
+                    <i class="fa-solid fa-briefcase"></i> {{ emp.position }} — {{ emp.department.name_kh }}
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+            <div style="background: white; border: 1px solid var(--card-border); border-radius: var(--radius-md); padding: 10px 18px; text-align: center;">
+                <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">ប្រាក់ខែគោល (Base)</div>
+                <div class="currency num" style="font-size: 19px; font-weight: 800; color: #059669;">
+                    ${{ "{:,.2f}".format(emp.base_salary) }}
+                </div>
+            </div>
+            <div style="background: white; border: 1px solid var(--card-border); border-radius: var(--radius-md); padding: 10px 18px; text-align: center;">
+                <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">ស្ថានភាពគ្រួសារ</div>
+                <div style="font-size: 14px; font-weight: 700; color: #0f172a;">
+                    {{ emp.marital_status or 'នៅលីវ' }}
+                </div>
+            </div>
+            <div style="background: white; border: 1px solid var(--card-border); border-radius: var(--radius-md); padding: 10px 18px; text-align: center;">
+                <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">ឯកសារតម្កល់</div>
+                <div class="num" style="font-size: 19px; font-weight: 800; color: var(--primary);">
+                    {{ documents|length }} <span style="font-size: 12px; font-weight: normal;">ច្បាប់</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Two Columns: Official CV Details & Documents -->
+<div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; margin-bottom: 24px;">
+    <!-- ព័ត៌មានប្រវត្តិរូបសង្ខេប (Official Bio Details) -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fa-solid fa-address-card text-primary"></i>
+                ព័ត៌មានប្រវត្តិរូបសង្ខេប (Biographical Details)
+            </div>
+            <a href="{{ url_for('employee_official_cv', emp_id=emp.id) }}" target="_blank" class="btn btn-sm btn-secondary">
+                <i class="fa-solid fa-print"></i> ទម្រង់ A4
+            </a>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 13.5px;">
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--card-border); padding-bottom: 6px;">
+                <span style="color: var(--text-muted);">ថ្ងៃខែឆ្នាំកំណើត៖</span>
+                <strong class="num">{{ emp.dob.strftime('%d/%m/%Y') if emp.dob else 'មិនបានបញ្ជាក់' }}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--card-border); padding-bottom: 6px;">
+                <span style="color: var(--text-muted);">ទីកន្លែងកំណើត៖</span>
+                <strong style="text-align: right; max-width: 65%;">{{ emp.formatted_pob }}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--card-border); padding-bottom: 6px;">
+                <span style="color: var(--text-muted);">កម្រិតវប្បធម៌ & ឯកទេស៖</span>
+                <strong style="text-align: right;">{{ emp.education_level or '-' }} {% if emp.education_major %}({{ emp.education_major }}){% endif %}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--card-border); padding-bottom: 6px;">
+                <span style="color: var(--text-muted);">ភាសាបរទេស៖</span>
+                <strong style="text-align: right;">{{ emp.foreign_languages or '-' }}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--card-border); padding-bottom: 6px;">
+                <span style="color: var(--text-muted);">មុខជំនាញផ្សេងៗ៖</span>
+                <strong style="text-align: right;">{{ emp.other_skills or '-' }}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--card-border); padding-bottom: 6px;">
+                <span style="color: var(--text-muted);">ព័ត៌មានឪពុក៖</span>
+                <span style="text-align: right;">
+                    <strong>{{ emp.father_name or '-' }}</strong> 
+                    {% if emp.father_age %}({{ emp.father_age }}ឆ្នាំ){% endif %}
+                    {% if emp.father_status %} - {{ emp.father_status }}{% endif %}
+                    {% if emp.father_job %}({{ emp.father_job }}){% endif %}
+                </span>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--card-border); padding-bottom: 6px;">
+                <span style="color: var(--text-muted);">ព័ត៌មានម្តាយ៖</span>
+                <span style="text-align: right;">
+                    <strong>{{ emp.mother_name or '-' }}</strong> 
+                    {% if emp.mother_age %}({{ emp.mother_age }}ឆ្នាំ){% endif %}
+                    {% if emp.mother_status %} - {{ emp.mother_status }}{% endif %}
+                    {% if emp.mother_job %}({{ emp.mother_job }}){% endif %}
+                </span>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--card-border); padding-bottom: 6px;">
+                <span style="color: var(--text-muted);">អាសយដ្ឋានបច្ចុប្បន្ន៖</span>
+                <strong style="text-align: right; max-width: 65%;">{{ emp.formatted_current_address }}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--card-border); padding-bottom: 6px;">
+                <span style="color: var(--text-muted);">លេខទូរស័ព្ទ ÷</span>
+                <strong class="num" style="color: var(--primary);">{{ emp.phone or '-' }}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--card-border); padding-bottom: 6px;">
+                <span style="color: var(--text-muted);">អ៊ីម៉ែល៖</span>
+                <strong class="num">{{ emp.email or '-' }}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding-bottom: 6px;">
+                <span style="color: var(--text-muted);">គណនីធនាគារ៖</span>
+                <strong class="num" style="color: #059669;">{{ emp.bank_account or 'សាច់ប្រាក់សុទ្ធ' }}</strong>
+            </div>
+        </div>
+
+        {% if emp.work_experience_1 or emp.work_experience_2 or emp.work_experience_3 %}
+        <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--card-border);">
+            <div style="font-weight: 700; color: #0f172a; margin-bottom: 8px;">
+                <i class="fa-solid fa-timeline text-primary"></i> បទពិសោធន៍ការងារកន្លងមក៖
+            </div>
+            <ul style="padding-left: 20px; font-size: 13px; line-height: 1.8; color: var(--text-main);">
+                {% if emp.work_experience_1 %}<li>{{ emp.work_experience_1 }}</li>{% endif %}
+                {% if emp.work_experience_2 %}<li>{{ emp.work_experience_2 }}</li>{% endif %}
+                {% if emp.work_experience_3 %}<li>{{ emp.work_experience_3 }}</li>{% endif %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- ការគ្រប់គ្រងឯកសារ (Document Repository) -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fa-solid fa-folder-open text-primary"></i>
+                ការគ្រប់គ្រងឯកសារ (Documents)
+            </div>
+            <button type="button" class="btn btn-sm btn-primary" data-modal-target="modal-upload-doc">
+                <i class="fa-solid fa-upload"></i> Upload
+            </button>
+        </div>
+
+        {% if documents %}
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+            {% for doc in documents %}
+            <div style="display: flex; align-items: center; justify-content: space-between; background: #f8fafc; border: 1px solid var(--card-border); border-radius: var(--radius-md); padding: 12px 16px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 38px; height: 38px; border-radius: var(--radius-sm); background: #eef2ff; color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 16px;">
+                        {% if 'pdf' in doc.file_name.lower() %}
+                        <i class="fa-solid fa-file-pdf" style="color: #ef4444;"></i>
+                        {% elif 'doc' in doc.file_name.lower() %}
+                        <i class="fa-solid fa-file-word" style="color: #2563eb;"></i>
+                        {% else %}
+                        <i class="fa-solid fa-file-lines"></i>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <strong style="font-size: 13.5px; color: #0f172a; display: block;">{{ doc.title }}</strong>
+                        <span style="font-size: 11.5px; color: var(--text-muted);">
+                            {{ doc.doc_type_display }} • <span class="num">{{ doc.file_size or 'ឯកសារ' }}</span> • <span class="num">{{ doc.uploaded_at.strftime('%d/%m/%Y') }}</span>
+                        </span>
+                    </div>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <a href="{{ url_for('serve_upload', folder='documents', filename=doc.file_name) }}" target="_blank" class="btn btn-sm btn-secondary" title="ទាញយក / មើលឯកសារ">
+                        <i class="fa-solid fa-download"></i>
+                    </a>
+                    <form method="POST" action="{{ url_for('delete_document', doc_id=doc.id) }}" onsubmit="return confirm('តើអ្នកពិតជាចង់លុបឯកសារនេះមែនទេ?');" style="display: inline;">
+                        <button type="submit" class="btn btn-sm btn-danger" title="លុបឯកសារ">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 36px 20px; color: var(--text-muted);">
+            <i class="fa-regular fa-folder-open" style="font-size: 36px; color: #cbd5e1; margin-bottom: 10px; display: block;"></i>
+            <p>មិនទាន់មានឯកសារកិច្ចសន្យា ឬអត្តសញ្ញាណប័ណ្ណត្រូវបានបញ្ចូលនៅឡើយទេ!</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Bottom Section: Attendance History & Payslip History -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+    <!-- Attendance History -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fa-solid fa-calendar-days text-primary"></i>
+                វត្តមានចុងក្រោយ (Attendance)
+            </div>
+            <div style="font-size: 12.5px; color: var(--text-muted);">
+                វត្តមាន៖ <strong class="num" style="color: #059669;">{{ present_days }}</strong> ថ្ងៃ • OT: <strong class="num" style="color: var(--primary);">{{ ot_hours_total }}h</strong>
+            </div>
+        </div>
+
+        <div class="table-responsive" style="max-height: 320px; overflow-y: auto;">
+            <table class="table-custom">
+                <thead>
+                    <tr>
+                        <th>កាលបរិច្ឆេទ</th>
+                        <th>ចូល / ចេញ</th>
+                        <th>ស្ថានភាព</th>
+                        <th>ម៉ោង OT</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for a in attendances %}
+                    <tr>
+                        <td class="num">{{ a.date.strftime('%d/%m/%Y') }}</td>
+                        <td>
+                            <span class="num">{{ a.check_in or '-' }}</span> / <span class="num">{{ a.check_out or '-' }}</span>
+                        </td>
+                        <td>
+                            <span class="badge {{ a.status_info.class }}">{{ a.status_info.kh }}</span>
+                            {% if a.late_minutes > 0 %}
+                            <span class="emp-sub-text num" style="color: #d97706;">(យឺត {{ a.late_minutes }}mn)</span>
+                            {% endif %}
+                        </td>
+                        <td class="num">
+                            {{ a.ot_hours if a.ot_hours > 0 else '-' }}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" style="text-align: center; padding: 20px; color: var(--text-muted);">មិនទាន់មានកំណត់ត្រាវត្តមាន</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Payroll History -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fa-solid fa-file-invoice-dollar text-primary"></i>
+                ប្រវត្តិប្រាក់ខែ (Payroll History)
+            </div>
+        </div>
+
+        <div class="table-responsive" style="max-height: 320px; overflow-y: auto;">
+            <table class="table-custom">
+                <thead>
+                    <tr>
+                        <th>ខែ/ឆ្នាំ</th>
+                        <th>ប្រាក់ខែសរុប (Gross)</th>
+                        <th>ប្រាក់ខែជាក់ស្តែង (Net)</th>
+                        <th>ស្ថានភាព</th>
+                        <th>Payslip</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in payrolls %}
+                    <tr>
+                        <td><strong class="num">{{ p.month_year }}</strong></td>
+                        <td class="currency num">${{ "{:,.2f}".format(p.gross_salary) }}</td>
+                        <td>
+                            <strong class="currency num" style="color: #059669; font-size: 14px;">${{ "{:,.2f}".format(p.net_salary) }}</strong>
+                        </td>
+                        <td>
+                            <span class="badge {{ p.status_info.class }}">{{ p.status_info.kh }}</span>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('payroll_payslip', payroll_id=p.id) }}" target="_blank" class="btn btn-sm btn-secondary" title="មើល / បោះពុម្ព Payslip">
+                                <i class="fa-solid fa-print"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 20px; color: var(--text-muted);">មិនទាន់មានទិន្នន័យប្រាក់ខែ</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Upload Document Modal -->
+<div class="modal-overlay" id="modal-upload-doc">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-file-arrow-up text-primary"></i> ផ្ទុកឡើងឯកសារថ្មី (Upload Document)</h3>
+            <button class="modal-close" data-modal-close>&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('upload_employee_doc', emp_id=emp.id) }}" enctype="multipart/form-data">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">ប្រភេទឯកសារ (Document Type) <span style="color: var(--danger);">*</span></label>
+                    <select name="document_type" class="form-select" required>
+                        <option value="contract">កិច្ចសន្យាការងារ (Employment Contract)</option>
+                        <option value="id_card">អត្តសញ្ញាណប័ណ្ណ / Passport (National ID)</option>
+                        <option value="cv">ប្រវត្តិរូបសង្ខេប (CV / Resume)</option>
+                        <option value="certificate">សញ្ញាបត្រ / វិញ្ញាបនបត្រ</option>
+                        <option value="other">ឯកសារយោងផ្សេងៗ</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">ចំណងជើងឯកសារ (Document Title) <span style="color: var(--danger);">*</span></label>
+                    <input type="text" name="document_title" class="form-control" placeholder="ឧ. កិច្ចសន្យាការងារបន្តឆ្នាំ ២០២៦" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">ជ្រើសរើសឯកសារ (Choose File) <span style="color: var(--danger);">*</span></label>
+                    <input type="file" name="document_file" class="form-control" accept=".pdf,.doc,.docx,.jpg,.png" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">កំណត់សម្គាល់បន្ថែម (Notes)</label>
+                    <textarea name="document_notes" class="form-control" rows="2" placeholder="ព័ត៌មានលម្អិតបន្ថែម..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-modal-close>បោះបង់</button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa-solid fa-cloud-arrow-up"></i> Upload រក្សាទុក
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

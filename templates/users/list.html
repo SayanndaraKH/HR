@@ -1,0 +1,684 @@
+{% extends "base.html" %}
+
+{% block title %}គ្រប់គ្រងអ្នកប្រើប្រាស់ (User Management) - HRMS កម្ពុជា{% endblock %}
+{% block page_title %}គ្រប់គ្រងអ្នកប្រើប្រាស់ (User Management){% endblock %}
+{% block page_subtitle %}គ្រប់គ្រងគណនី សិទ្ធិតួនាទី ការអនុម័តចូលប្រើប្រាស់ និងការភ្ជាប់ជាមួយទិន្នន័យបុគ្គលិក{% endblock %}
+
+{% block topbar_actions %}
+    {% if current_user and current_user.role == 'admin' %}
+    <button type="button" class="btn btn-primary" onclick="openCreateUserModal()">
+        <i class="fa-solid fa-user-plus"></i> បង្កើតគណនីថ្មី (New User)
+    </button>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<!-- KPI Stats Row (5 Cards) -->
+<div class="kpi-grid" style="grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 24px;">
+    <div class="kpi-card">
+        <div class="kpi-icon" style="background: var(--primary-light); color: var(--primary);">
+            <i class="fa-solid fa-users"></i>
+        </div>
+        <div class="kpi-info">
+            <span class="kpi-label">អ្នកប្រើប្រាស់សរុប</span>
+            <div class="kpi-value num">{{ total_users }}</div>
+            <span class="kpi-subtext">គណនីក្នុងប្រព័ន្ធទាំងអស់</span>
+        </div>
+    </div>
+
+    <!-- Pending Approval Card (Special Highlight) -->
+    <div class="kpi-card" style="{% if pending_users > 0 %}border: 1.5px solid #f59e0b; background: #fffbeb; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);{% endif %}">
+        <div class="kpi-icon" style="background: var(--warning-light); color: var(--warning-text);">
+            <i class="fa-solid fa-hourglass-half"></i>
+        </div>
+        <div class="kpi-info">
+            <span class="kpi-label" style="{% if pending_users > 0 %}color: #b45309; font-weight: 700;{% endif %}">រង់ចាំការអនុម័ត</span>
+            <div class="kpi-value num" style="{% if pending_users > 0 %}color: #d97706;{% endif %}">{{ pending_users }}</div>
+            <span class="kpi-subtext">
+                {% if pending_users > 0 %}
+                <a href="{{ url_for('user_list', approval='pending') }}" style="color: #b45309; font-weight: 600; text-decoration: underline;">
+                    ចុចមើលបញ្ជីរង់ចាំ &rarr;
+                </a>
+                {% else %}
+                គ្មានគណនីរង់ចាំទេ
+                {% endif %}
+            </span>
+        </div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-icon" style="background: var(--danger-light); color: var(--danger);">
+            <i class="fa-solid fa-shield-halved"></i>
+        </div>
+        <div class="kpi-info">
+            <span class="kpi-label">អ្នកគ្រប់គ្រង (ADMIN)</span>
+            <div class="kpi-value num">{{ admin_users }}</div>
+            <span class="kpi-subtext">មានសិទ្ធិពេញលេញលើប្រព័ន្ធ</span>
+        </div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-icon" style="background: var(--info-light); color: var(--info);">
+            <i class="fa-solid fa-user-tie"></i>
+        </div>
+        <div class="kpi-info">
+            <span class="kpi-label">HR & គណនេយ្យករ</span>
+            <div class="kpi-value num">{{ hr_fin_users }}</div>
+            <span class="kpi-subtext">គ្រប់គ្រងវត្តមាន & ប្រាក់ខែ</span>
+        </div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-icon" style="background: var(--success-light); color: var(--success);">
+            <i class="fa-solid fa-circle-check"></i>
+        </div>
+        <div class="kpi-info">
+            <span class="kpi-label">គណនីសកម្ម</span>
+            <div class="kpi-value num">{{ active_users }}</div>
+            <span class="kpi-subtext">អាចចូលប្រើប្រាស់បាន</span>
+        </div>
+    </div>
+</div>
+
+<!-- Search & Filter Bar -->
+<div class="filter-bar">
+    <form method="GET" action="{{ url_for('user_list') }}" style="display: flex; flex-wrap: wrap; gap: 12px; width: 100%; align-items: center; justify-content: space-between;">
+        <div class="filter-group">
+            <!-- Search input -->
+            <div class="input-icon-wrap" style="width: 250px; position: relative;">
+                <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 12px; top: 12px; color: var(--text-muted);"></i>
+                <input type="text" name="search" value="{{ search }}" class="form-control" style="padding-left: 36px;" placeholder="ស្វែងរកតាមគណនី ឈ្មោះ...">
+            </div>
+
+            <!-- Approval status filter -->
+            <select name="approval" class="form-select" style="width: 190px;" onchange="this.form.submit()">
+                <option value="">-- ការអនុម័តទាំងអស់ --</option>
+                <option value="pending" {% if selected_approval == 'pending' %}selected{% endif %}>⏳ រង់ចាំអនុម័ត (Pending)</option>
+                <option value="approved" {% if selected_approval == 'approved' %}selected{% endif %}>✓ បានអនុម័ត (Approved)</option>
+                <option value="rejected" {% if selected_approval == 'rejected' %}selected{% endif %}>✕ បដិសេធ (Rejected)</option>
+            </select>
+
+            <!-- Role filter -->
+            <select name="role" class="form-select" style="width: 170px;" onchange="this.form.submit()">
+                <option value="">-- តួនាទីទាំងអស់ --</option>
+                <option value="admin" {% if selected_role == 'admin' %}selected{% endif %}>អ្នកគ្រប់គ្រង (Admin)</option>
+                <option value="hr" {% if selected_role == 'hr' %}selected{% endif %}>ធនធានមនុស្ស (HR)</option>
+                <option value="accountant" {% if selected_role == 'accountant' %}selected{% endif %}>គណនេយ្យករ (Finance)</option>
+                <option value="staff" {% if selected_role == 'staff' %}selected{% endif %}>បុគ្គលិក (Staff)</option>
+            </select>
+
+            <!-- Status filter -->
+            <select name="status" class="form-select" style="width: 160px;" onchange="this.form.submit()">
+                <option value="">-- ស្ថានភាពទាំងអស់ --</option>
+                <option value="1" {% if selected_status == '1' %}selected{% endif %}>សកម្ម (Active)</option>
+                <option value="0" {% if selected_status == '0' %}selected{% endif %}>ផ្អាក (Inactive)</option>
+            </select>
+        </div>
+
+        <div>
+            {% if search or selected_role or selected_status or selected_approval %}
+            <a href="{{ url_for('user_list') }}" class="btn btn-secondary btn-sm">
+                <i class="fa-solid fa-arrows-rotate"></i> កំណត់ឡើងវិញ (Reset)
+            </a>
+            {% endif %}
+            <span style="font-size: 13px; color: var(--text-muted); margin-left: 8px;">
+                រកឃើញអ្នកប្រើប្រាស់៖ <strong class="num">{{ users|length }}</strong> នាក់
+            </span>
+        </div>
+    </form>
+</div>
+
+<!-- Users Table Card -->
+<div class="card" style="padding: 0; overflow: hidden; box-shadow: var(--shadow-sm); border: 1px solid var(--card-border);">
+    <div class="table-responsive">
+        <table class="table-custom">
+            <thead>
+                <tr>
+                    <th style="width: 60px;"># ID</th>
+                    <th>ឈ្មោះបុគ្គលិក & បុគ្គលិកដែលភ្ជាប់</th>
+                    <th>គណនីប្រើប្រាស់ (Username)</th>
+                    <th>តួនាទី (Role)</th>
+                    <th>ការអនុម័ត (Approval)</th>
+                    <th>លេខទូរស័ព្ទ</th>
+                    <th>ស្ថានភាព</th>
+                    <th>ចូលចុងក្រោយ</th>
+                    <th style="text-align: right; width: 220px;">សកម្មភាព</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                <tr style="{% if u.approval_status == 'pending' %}background: #fffdf5;{% endif %}">
+                    <td class="num" style="color: var(--text-muted); font-weight: 600;">
+                        #{{ u.id }}
+                    </td>
+                    <td>
+                        <div class="emp-profile-tag" style="gap: 12px;">
+                            <div class="emp-avatar" style="background: linear-gradient(135deg, {% if u.is_permanent_admin %}#dc2626, #991b1b{% elif u.role == 'admin' %}#ef4444, #dc2626{% elif u.role == 'hr' %}#4f46e5, #4338ca{% elif u.role == 'accountant' %}#10b981, #059669{% else %}#64748b, #475569{% endif %}); color: white; font-weight: bold; font-family: var(--font-en);">
+                                {{ u.username[:2].upper() }}
+                            </div>
+                            <div>
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <strong style="font-size: 14.5px; color: var(--text-main);">
+                                        {{ u.employee_name }}
+                                    </strong>
+                                    {% if u.is_permanent_admin %}
+                                    <span class="badge" style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; font-size: 10px; padding: 1px 6px;">
+                                        <i class="fa-solid fa-lock"></i> អចិន្ត្រៃយ៍
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                <div class="emp-sub-text">
+                                    {% if u.employee %}
+                                    <span class="badge" style="background: var(--primary-light); color: var(--primary); padding: 2px 8px; border-radius: 4px; font-size: 11px;">
+                                        <i class="fa-solid fa-link"></i> [{{ u.employee.emp_code }}] {{ u.employee.position }}
+                                    </span>
+                                    {% else %}
+                                    <span style="color: var(--text-muted); font-size: 11.5px;">គណនីទូទៅ (មិនភ្ជាប់កូដបុគ្គលិក)</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <code class="code-tag" style="font-size: 13.5px; font-weight: 700; color: {% if u.is_permanent_admin %}#dc2626{% else %}var(--primary){% endif %}; background: {% if u.is_permanent_admin %}#fee2e2{% else %}var(--primary-light){% endif %}; padding: 3px 8px; border-radius: 6px;">
+                                @{{ u.username }}
+                            </code>
+                            {% if current_user and current_user.id == u.id %}
+                            <span class="badge badge-info" style="font-size: 10px; padding: 2px 6px;">គណនីអ្នក</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge {{ u.role_badge.class }}" style="display: inline-flex; align-items: center; gap: 5px; font-size: 12px; padding: 4px 10px;">
+                            <i class="{{ u.role_badge.icon }}"></i>
+                            {{ u.role_badge.kh }}
+                        </span>
+                    </td>
+                    <td>
+                        <!-- Approval Status Badge -->
+                        {% if u.approval_status == 'pending' %}
+                        <span class="badge badge-warning" style="font-size: 11.5px; padding: 4px 8px; display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="fa-solid fa-hourglass-half"></i> រង់ចាំអនុម័ត
+                        </span>
+                        {% elif u.approval_status == 'rejected' %}
+                        <span class="badge badge-danger" style="font-size: 11.5px; padding: 4px 8px; display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="fa-solid fa-circle-xmark"></i> បដិសេធ
+                        </span>
+                        {% else %}
+                        <span class="badge badge-success" style="font-size: 11.5px; padding: 4px 8px; display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="fa-solid fa-circle-check"></i> បានអនុម័ត
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if u.phone %}
+                        <div class="num" style="font-weight: 600; color: var(--text-main);">
+                            <i class="fa-solid fa-phone" style="font-size: 11px; color: var(--text-muted); margin-right: 4px;"></i>
+                            {{ u.phone }}
+                        </div>
+                        {% else %}
+                        <span style="color: var(--text-muted);">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if u.is_active %}
+                        <span class="badge badge-success" style="font-size: 11.5px;">
+                            <i class="fa-solid fa-circle" style="font-size: 7px; margin-right: 4px;"></i>សកម្ម
+                        </span>
+                        {% else %}
+                        <span class="badge badge-danger" style="font-size: 11.5px;">
+                            <i class="fa-solid fa-circle-xmark" style="margin-right: 4px;"></i>ផ្អាក
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="num" style="font-size: 12px; color: var(--text-main);">
+                            {% if u.last_login %}
+                            <i class="fa-regular fa-clock" style="color: var(--primary); font-size: 11px; margin-right: 3px;"></i>
+                            {{ u.last_login.strftime('%d/%m/%Y %H:%M') }}
+                            {% else %}
+                            <span style="color: var(--text-muted);">មិនទាន់ធ្លាប់ចូល</span>
+                            {% endif %}
+                        </div>
+                        <div class="num" style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+                            បង្កើត៖ {{ u.created_at.strftime('%d/%m/%Y') if u.created_at else '-' }}
+                        </div>
+                    </td>
+                    <td style="text-align: right;">
+                        <div style="display: inline-flex; gap: 6px; align-items: center; flex-wrap: nowrap;">
+                            {% if current_user and current_user.role == 'admin' %}
+                                <!-- 1. Approval Action Buttons for Pending Users -->
+                                {% if u.approval_status == 'pending' %}
+                                <form action="{{ url_for('user_approve', user_id=u.id) }}" method="POST" style="display: inline;">
+                                    <button type="submit" class="btn btn-sm" style="background: #10b981; color: white; border: none; font-size: 12px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 4px;" title="អនុម័តឱ្យចូលប្រើប្រាស់">
+                                        <i class="fa-solid fa-check"></i> អនុម័ត
+                                    </button>
+                                </form>
+                                <form action="{{ url_for('user_reject', user_id=u.id) }}" method="POST" style="display: inline;"
+                                      onsubmit="return confirm('តើអ្នកប្រាកដជាចង់បដិសេធគណនី @{{ u.username }} នេះមែនទេ?');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="បដិសេធ (Reject)" style="padding: 4px 8px;">
+                                        <i class="fa-solid fa-xmark"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+
+                                <!-- 2. Edit Button -->
+                                <button type="button" class="btn btn-sm btn-outline-primary" title="កែប្រែព័ត៌មាន (Edit)"
+                                        onclick="openEditUserModal({{ u.id }}, '{{ u.username|escape }}', '{{ u.employee_name|escape }}', '{{ u.role }}', '{{ u.phone or '' }}', '{{ u.employee_id or '' }}', {{ 'true' if u.is_active else 'false' }}, '{{ u.approval_status or 'approved' }}', {{ 'true' if u.is_permanent_admin else 'false' }})">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
+
+                                <!-- 3. Change Password Button -->
+                                <button type="button" class="btn btn-sm btn-outline-warning" title="ប្តូរលេខសម្ងាត់ (Reset Password)"
+                                        onclick="openPasswordModal({{ u.id }}, '{{ u.username|escape }}', '{{ u.employee_name|escape }}')">
+                                    <i class="fa-solid fa-key"></i>
+                                </button>
+
+                                <!-- 4. Toggle Status Button (Hidden for Permanent ADMIN) -->
+                                {% if not u.is_permanent_admin and current_user.id != u.id %}
+                                <form action="{{ url_for('user_toggle_status', user_id=u.id) }}" method="POST" style="display: inline;" 
+                                      onsubmit="return confirm('តើអ្នកប្រាកដជាចង់{% if u.is_active %}ផ្អាកដំណើរការ{% else %}បើកដំណើរការឡើងវិញ{% endif %}គណនី @{{ u.username }} មែនទេ?');">
+                                    <button type="submit" class="btn btn-sm {% if u.is_active %}btn-outline-secondary{% else %}btn-outline-success{% endif %}" 
+                                            title="{% if u.is_active %}ផ្អាកគណនី{% else %}បើកគណនីឡើងវិញ{% endif %}">
+                                        <i class="fa-solid {% if u.is_active %}fa-user-slash{% else %}fa-user-check{% endif %}"></i>
+                                    </button>
+                                </form>
+
+                                <!-- 5. Delete Button (Hidden for Permanent ADMIN) -->
+                                <form action="{{ url_for('user_delete', user_id=u.id) }}" method="POST" style="display: inline;" 
+                                      onsubmit="return confirm('តើអ្នកប្រាកដជាចង់លុបគណនី @{{ u.username }} នេះជាអចិន្ត្រៃយ៍មែនទេ? សកម្មភាពនេះមិនអាចត្រឡប់វិញបានទេ!');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="លុបគណនី (Delete)">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            {% else %}
+                            <span style="font-size: 12px; color: var(--text-muted);"><i class="fa-solid fa-lock"></i> មើលតែប៉ុណ្ណោះ</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="9" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                        <i class="fa-solid fa-user-xmark" style="font-size: 36px; margin-bottom: 10px; color: #cbd5e1; display: block;"></i>
+                        មិនមានទិន្នន័យអ្នកប្រើប្រាស់ដែលត្រូវនឹងលក្ខខណ្ឌស្វែងរកនេះទេ!
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- =========================================================
+     MODAL 1: CREATE USER MODAL
+     ========================================================= -->
+<div id="createUserModal" class="modal-backdrop-custom" style="display: none;">
+    <div class="modal-dialog-custom">
+        <div class="modal-header-custom">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 38px; height: 38px; border-radius: 10px; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                    <i class="fa-solid fa-user-plus"></i>
+                </div>
+                <div>
+                    <h3 style="font-size: 16px; margin: 0; font-weight: 700;">បង្កើតគណនីអ្នកប្រើប្រាស់ថ្មី</h3>
+                    <p style="font-size: 12px; color: var(--text-muted); margin: 0;">គណនីដែលបង្កើតដោយ ADMIN នឹងទទួលបានការអនុម័តដោយស្វ័យប្រវត្តិ</p>
+                </div>
+            </div>
+            <button type="button" class="close-modal-btn" onclick="closeModal('createUserModal')">&times;</button>
+        </div>
+
+        <form action="{{ url_for('user_create') }}" method="POST">
+            <div class="modal-body-custom">
+                <!-- 1. Employee Name & Select Existing -->
+                <div class="form-group-custom" style="margin-bottom: 14px;">
+                    <label class="form-label-custom">
+                        ឈ្មោះបុគ្គលិក (Employee Name) <span style="color: red;">*</span>
+                    </label>
+                    {% if employees %}
+                    <select class="form-select" style="margin-bottom: 8px;" onchange="onModalEmpSelect(this, 'create_emp_name', 'create_phone')">
+                        <option value="">-- ជ្រើសរើសពីបុគ្គលិកដែលមានស្រាប់ (Optional) --</option>
+                        {% for emp in employees %}
+                        <option value="{{ emp.id }}" data-name="{{ emp.full_name_kh }}" data-phone="{{ emp.phone or '' }}">
+                            [{{ emp.emp_code }}] {{ emp.full_name_kh }} - {{ emp.position }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <input type="hidden" name="employee_id" id="create_employee_id" value="">
+                    {% endif %}
+                    <input type="text" id="create_emp_name" name="employee_name" class="form-control" placeholder="វាយបញ្ចូលឈ្មោះបុគ្គលិក" required>
+                </div>
+
+                <!-- 2. Username & Role -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+                    <div class="form-group-custom">
+                        <label class="form-label-custom">
+                            គណនីប្រើប្រាស់ (Username) <span style="color: red;">*</span>
+                        </label>
+                        <input type="text" name="username" class="form-control num" placeholder="ឧ. sokha" required autocomplete="username">
+                    </div>
+
+                    <div class="form-group-custom">
+                        <label class="form-label-custom">
+                            តួនាទី (Role) <span style="color: red;">*</span>
+                        </label>
+                        <select name="role" class="form-select" required>
+                            <option value="staff">បុគ្គលិក (Staff)</option>
+                            <option value="accountant">គណនេយ្យករ (Finance)</option>
+                            <option value="hr">ធនធានមនុស្ស (HR)</option>
+                            <option value="admin">អ្នកគ្រប់គ្រង (Admin)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 3. Phone & Active Status -->
+                <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 14px; margin-bottom: 14px;">
+                    <div class="form-group-custom">
+                        <label class="form-label-custom">លេខទូរស័ព្ទ (Phone)</label>
+                        <input type="text" id="create_phone" name="phone" class="form-control num" placeholder="ឧ. 012 999 888">
+                    </div>
+
+                    <div class="form-group-custom">
+                        <label class="form-label-custom">ស្ថានភាព</label>
+                        <select name="is_active" class="form-select">
+                            <option value="1" selected>សកម្ម (Active)</option>
+                            <option value="0">ផ្អាក (Inactive)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 4. Password -->
+                <div class="form-group-custom" style="margin-bottom: 8px;">
+                    <label class="form-label-custom">
+                        លេខសម្ងាត់ (Password) <span style="color: red;">*</span>
+                    </label>
+                    <input type="password" name="password" class="form-control num" placeholder="យ៉ាងតិច ៦ ខ្ទង់" required autocomplete="new-password">
+                </div>
+            </div>
+
+            <div class="modal-footer-custom">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('createUserModal')">បោះបង់</button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa-solid fa-save"></i> រក្សាទុកគណនី
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- =========================================================
+     MODAL 2: EDIT USER MODAL
+     ========================================================= -->
+<div id="editUserModal" class="modal-backdrop-custom" style="display: none;">
+    <div class="modal-dialog-custom">
+        <div class="modal-header-custom">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 38px; height: 38px; border-radius: 10px; background: #e0e7ff; color: #4338ca; display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                    <i class="fa-solid fa-user-pen"></i>
+                </div>
+                <div>
+                    <h3 style="font-size: 16px; margin: 0; font-weight: 700;">កែប្រែព័ត៌មានគណនី</h3>
+                    <p style="font-size: 12px; color: var(--text-muted); margin: 0;">គណនី៖ <strong id="edit_modal_username_display" class="num text-primary"></strong></p>
+                </div>
+            </div>
+            <button type="button" class="close-modal-btn" onclick="closeModal('editUserModal')">&times;</button>
+        </div>
+
+        <form id="editUserForm" method="POST">
+            <div class="modal-body-custom">
+                <!-- 1. Employee Name -->
+                <div class="form-group-custom" style="margin-bottom: 14px;">
+                    <label class="form-label-custom">ឈ្មោះបុគ្គលិក (Employee Name) <span style="color: red;">*</span></label>
+                    <input type="text" id="edit_emp_name" name="employee_name" class="form-control" required>
+                </div>
+
+                <!-- 2. Role & Active -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+                    <div class="form-group-custom">
+                        <label class="form-label-custom">តួនាទី (Role) <span style="color: red;">*</span></label>
+                        <select id="edit_role" name="role" class="form-select" required>
+                            <option value="staff">បុគ្គលិក (Staff)</option>
+                            <option value="accountant">គណនេយ្យករ (Finance)</option>
+                            <option value="hr">ធនធានមនុស្ស (HR)</option>
+                            <option value="admin">អ្នកគ្រប់គ្រង (Admin)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group-custom">
+                        <label class="form-label-custom">ស្ថានភាពគណនី</label>
+                        <select id="edit_is_active" name="is_active" class="form-select">
+                            <option value="1">សកម្ម (Active)</option>
+                            <option value="0">ផ្អាក (Inactive)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 3. Approval Status & Phone -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+                    <div class="form-group-custom">
+                        <label class="form-label-custom">ស្ថានភាពអនុម័ត (Approval)</label>
+                        <select id="edit_approval_status" name="approval_status" class="form-select">
+                            <option value="approved">✓ បានអនុម័ត (Approved)</option>
+                            <option value="pending">⏳ រង់ចាំអនុម័ត (Pending)</option>
+                            <option value="rejected">✕ បដិសេធ (Rejected)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group-custom">
+                        <label class="form-label-custom">លេខទូរស័ព្ទ</label>
+                        <input type="text" id="edit_phone" name="phone" class="form-control num">
+                    </div>
+                </div>
+
+                <!-- 4. Linked Employee -->
+                <div class="form-group-custom">
+                    <label class="form-label-custom">ភ្ជាប់ជាមួយបុគ្គលិក</label>
+                    <select id="edit_employee_id" name="employee_id" class="form-select">
+                        <option value="">-- មិនភ្ជាប់ (គ្មាន) --</option>
+                        {% for emp in employees %}
+                        <option value="{{ emp.id }}">[{{ emp.emp_code }}] {{ emp.full_name_kh }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="modal-footer-custom">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('editUserModal')">បោះបង់</button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa-solid fa-save"></i> រក្សាទុកការផ្លាស់ប្តូរ
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- =========================================================
+     MODAL 3: RESET PASSWORD MODAL
+     ========================================================= -->
+<div id="passwordModal" class="modal-backdrop-custom" style="display: none;">
+    <div class="modal-dialog-custom">
+        <div class="modal-header-custom">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 38px; height: 38px; border-radius: 10px; background: var(--warning-light); color: var(--warning-text); display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                    <i class="fa-solid fa-key"></i>
+                </div>
+                <div>
+                    <h3 style="font-size: 16px; margin: 0; font-weight: 700;">ប្តូរលេខសម្ងាត់</h3>
+                    <p style="font-size: 12px; color: var(--text-muted); margin: 0;">គណនី៖ <strong id="pwd_modal_username" class="num text-primary"></strong> (<span id="pwd_modal_empname"></span>)</p>
+                </div>
+            </div>
+            <button type="button" class="close-modal-btn" onclick="closeModal('passwordModal')">&times;</button>
+        </div>
+
+        <form id="passwordForm" method="POST">
+            <div class="modal-body-custom">
+                <div class="form-group-custom" style="margin-bottom: 14px;">
+                    <label class="form-label-custom">លេខសម្ងាត់ថ្មី (New Password) <span style="color: red;">*</span></label>
+                    <input type="password" name="new_password" class="form-control num" placeholder="យ៉ាងតិច ៦ ខ្ទង់" required autocomplete="new-password">
+                </div>
+
+                <div class="form-group-custom" style="margin-bottom: 8px;">
+                    <label class="form-label-custom">បញ្ជាក់លេខសម្ងាត់ថ្មី (Confirm Password) <span style="color: red;">*</span></label>
+                    <input type="password" name="confirm_password" class="form-control num" placeholder="វាយលេខសម្ងាត់ម្តងទៀត" required autocomplete="new-password">
+                </div>
+            </div>
+
+            <div class="modal-footer-custom">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('passwordModal')">បោះបង់</button>
+                <button type="submit" class="btn btn-warning" style="background: var(--warning); color: white; border: none;">
+                    <i class="fa-solid fa-check"></i> ប្តូរលេខសម្ងាត់
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    /* Modal styles */
+    .modal-backdrop-custom {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(4px);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        animation: fadeInModal 0.2s ease-out;
+    }
+
+    @keyframes fadeInModal {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    .modal-dialog-custom {
+        background: #ffffff;
+        width: 100%;
+        max-width: 520px;
+        border-radius: 16px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        overflow: hidden;
+        animation: slideUpModal 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes slideUpModal {
+        from { transform: translateY(20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    .modal-header-custom {
+        padding: 16px 20px;
+        border-bottom: 1px solid #f1f5f9;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .close-modal-btn {
+        background: none;
+        border: none;
+        font-size: 24px;
+        color: #94a3b8;
+        cursor: pointer;
+        line-height: 1;
+        padding: 4px;
+        border-radius: 6px;
+        transition: all 0.15s;
+    }
+
+    .close-modal-btn:hover {
+        color: #ef4444;
+        background: #fef2f2;
+    }
+
+    .modal-body-custom {
+        padding: 20px;
+    }
+
+    .modal-footer-custom {
+        padding: 14px 20px;
+        border-top: 1px solid #f1f5f9;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+        background: #f8fafc;
+    }
+
+    .form-label-custom {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        color: #334155;
+        margin-bottom: 6px;
+    }
+</style>
+
+<script>
+    function openCreateUserModal() {
+        document.getElementById('createUserModal').style.display = 'flex';
+    }
+
+    function openEditUserModal(id, username, empName, role, phone, empId, isActive, approvalStatus, isPermanentAdmin) {
+        document.getElementById('edit_modal_username_display').textContent = '@' + username;
+        document.getElementById('edit_emp_name').value = empName;
+        document.getElementById('edit_role').value = role;
+        document.getElementById('edit_phone').value = phone || '';
+        document.getElementById('edit_employee_id').value = empId || '';
+        document.getElementById('edit_is_active').value = isActive ? '1' : '0';
+        document.getElementById('edit_approval_status').value = approvalStatus || 'approved';
+
+        const roleSelect = document.getElementById('edit_role');
+        const activeSelect = document.getElementById('edit_is_active');
+        if (isPermanentAdmin) {
+            roleSelect.disabled = true;
+            activeSelect.disabled = true;
+        } else {
+            roleSelect.disabled = false;
+            activeSelect.disabled = false;
+        }
+
+        document.getElementById('editUserForm').action = '/users/' + id + '/edit';
+        document.getElementById('editUserModal').style.display = 'flex';
+    }
+
+    function openPasswordModal(id, username, empName) {
+        document.getElementById('pwd_modal_username').textContent = '@' + username;
+        document.getElementById('pwd_modal_empname').textContent = empName;
+        document.getElementById('passwordForm').action = '/users/' + id + '/change-password';
+        document.getElementById('passwordModal').style.display = 'flex';
+    }
+
+    function closeModal(modalId) {
+        document.getElementById(modalId).style.display = 'none';
+    }
+
+    function onModalEmpSelect(select, nameInputId, phoneInputId) {
+        const opt = select.options[select.selectedIndex];
+        const name = opt.getAttribute('data-name');
+        const phone = opt.getAttribute('data-phone');
+        if (name) {
+            document.getElementById(nameInputId).value = name;
+        }
+        if (phone) {
+            const pInput = document.getElementById(phoneInputId);
+            if (!pInput.value) pInput.value = phone;
+        }
+        document.getElementById('create_employee_id').value = opt.value;
+    }
+
+    // Close modal when clicking outside
+    window.addEventListener('click', function(e) {
+        ['createUserModal', 'editUserModal', 'passwordModal'].forEach(function(id) {
+            const m = document.getElementById(id);
+            if (m && e.target === m) {
+                m.style.display = 'none';
+            }
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>វិក្កយបត្រប្រាក់បៀវត្ស (Payslip) - {{ p.employee.full_name_kh }} ({{ p.month_year }})</title>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Main Style -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        body {
+            background-color: #f1f5f9;
+            padding: 30px 16px;
+            display: block;
+        }
+        @media print {
+            body {
+                background-color: white;
+                padding: 0;
+            }
+            .action-bar {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Action Bar (hidden on print) -->
+    <div class="action-bar" style="max-width: 820px; margin: 0 auto 20px; display: flex; justify-content: space-between; align-items: center;">
+        <a href="{{ url_for('payroll_list', month=p.month_year) }}" class="btn btn-secondary">
+            <i class="fa-solid fa-arrow-left"></i> ត្រឡប់ទៅបញ្ជីប្រាក់ខែ
+        </a>
+        <div style="display: flex; gap: 10px;">
+            <button onclick="window.print()" class="btn btn-primary">
+                <i class="fa-solid fa-print"></i> បោះពុម្ពវិក្កយបត្រ (Print / Save PDF)
+            </button>
+        </div>
+    </div>
+
+    <!-- Official Payslip Container -->
+    <div class="payslip-container">
+        <!-- Header -->
+        <div class="payslip-header">
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <div class="brand-logo" style="width: 50px; height: 50px; font-size: 24px;">
+                    <i class="fa-solid fa-building-user"></i>
+                </div>
+                <div class="payslip-company-title">
+                    <h2>ក្រុមហ៊ុន អេច អ អឹម អេស ខេមបូឌា</h2>
+                    <p style="font-family: var(--font-en); font-weight: 600; text-transform: uppercase;">HRMS CAMBODIA CO., LTD.</p>
+                    <p style="font-size: 11.5px; color: #64748b;">អាគារលេខ ៨៨ មហាវិថីសហព័ន្ធរុស្ស៊ី រាជធានីភ្នំពេញ • ទូរស័ព្ទ៖ 023 999 888</p>
+                </div>
+            </div>
+
+            <div class="payslip-title-badge">
+                <h1>វិក្កយបត្រប្រាក់ខែ</h1>
+                <p style="font-size: 12.5px; font-family: var(--font-en); font-weight: 700; color: #64748b; letter-spacing: 0.8px;">
+                    SALARY PAYSLIP
+                </p>
+                <div class="badge badge-primary" style="margin-top: 6px; font-size: 12px;">
+                    ប្រចាំខែ៖ <span class="num">{{ p.month_year }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Employee Info Metadata -->
+        <div class="payslip-meta-grid">
+            <div class="payslip-meta-item">
+                <span class="label">កូដបុគ្គលិក (ID):</span>
+                <span class="value num">{{ p.employee.emp_code }}</span>
+            </div>
+            <div class="payslip-meta-item">
+                <span class="label">ឈ្មោះបុគ្គលិក:</span>
+                <span class="value">{{ p.employee.full_name_kh }} ({{ p.employee.full_name_en }})</span>
+            </div>
+            <div class="payslip-meta-item">
+                <span class="label">នាយកដ្ឋាន:</span>
+                <span class="value">{{ p.employee.department.name_kh }}</span>
+            </div>
+            <div class="payslip-meta-item">
+                <span class="label">តួនាទី / មុខតំណែង:</span>
+                <span class="value">{{ p.employee.position }}</span>
+            </div>
+            <div class="payslip-meta-item">
+                <span class="label">ថ្ងៃចូលការងារ:</span>
+                <span class="value num">{{ p.employee.hire_date.strftime('%d/%m/%Y') if p.employee.hire_date else '-' }}</span>
+            </div>
+            <div class="payslip-meta-item">
+                <span class="label">វិធីទូទាត់ប្រាក់:</span>
+                <span class="value">{{ p.payment_method or 'ABA Bank Transfer' }}</span>
+            </div>
+        </div>
+
+        <!-- Attendance Stats in Payslip -->
+        <div style="display: flex; justify-content: space-between; background: #f1f5f9; padding: 10px 18px; border-radius: var(--radius-sm); margin-bottom: 24px; font-size: 13px;">
+            <span>ថ្ងៃធ្វើការស្តង់ដារ៖ <strong class="num">{{ p.standard_work_days }} ថ្ងៃ</strong></span>
+            <span>ថ្ងៃធ្វើការជាក់ស្តែង៖ <strong class="num" style="color: #059669;">{{ p.worked_days }} ថ្ងៃ</strong></span>
+            <span>អវត្តមាន៖ <strong class="num" style="color: #dc2626;">{{ p.absent_days }} ថ្ងៃ</strong></span>
+            <span>ម៉ោងបន្ថែម (OT)៖ <strong class="num" style="color: var(--primary);">{{ p.ot_hours }} ម៉ោង (x{{ p.ot_rate }})</strong></span>
+        </div>
+
+        <!-- Earnings & Deductions Two Columns -->
+        <div class="payslip-columns">
+            <!-- 1. ប្រាក់ចំណូល (Earnings) -->
+            <div class="payslip-box">
+                <div class="payslip-box-header earnings">
+                    <i class="fa-solid fa-arrow-down-long"></i> ប្រាក់ចំណូល (Earnings)
+                </div>
+                <div class="payslip-line-item">
+                    <span>ប្រាក់ខែគោល (Base Salary)</span>
+                    <span class="currency num">${{ "{:,.2f}".format(p.base_salary) }}</span>
+                </div>
+                <div class="payslip-line-item">
+                    <span>ប្រាក់ម៉ោងបន្ថែម (Overtime Pay)</span>
+                    <span class="currency num">${{ "{:,.2f}".format(p.ot_amount) }}</span>
+                </div>
+                <div class="payslip-line-item">
+                    <span>ប្រាក់រង្វាន់លើកទឹកចិត្ត (Bonus)</span>
+                    <span class="currency num">${{ "{:,.2f}".format(p.bonus) }}</span>
+                </div>
+                <div class="payslip-line-item">
+                    <span>ប្រាក់ឧបត្ថម្ភ (Allowances)</span>
+                    <span class="currency num">${{ "{:,.2f}".format(p.allowance) }}</span>
+                </div>
+                <div class="payslip-line-item total-line" style="color: #065f46;">
+                    <span>សរុបប្រាក់ចំណូល (Gross Pay)</span>
+                    <span class="currency num">${{ "{:,.2f}".format(p.gross_salary) }}</span>
+                </div>
+            </div>
+
+            <!-- 2. ការកាត់កង (Deductions) -->
+            <div class="payslip-box">
+                <div class="payslip-box-header deductions">
+                    <i class="fa-solid fa-arrow-up-long"></i> ការកាត់កង (Deductions)
+                </div>
+                <div class="payslip-line-item">
+                    <span>កាត់អវត្តមាន (Absent Deduction)</span>
+                    <span class="currency num">${{ "{:,.2f}".format(p.absent_deduction) }}</span>
+                </div>
+                <div class="payslip-line-item">
+                    <span>កាត់មកយឺត (Late Deduction)</span>
+                    <span class="currency num">${{ "{:,.2f}".format(p.late_deduction) }}</span>
+                </div>
+                <div class="payslip-line-item">
+                    <span>ភាគទាន ប.ស.ស (NSSF Pension 2%)</span>
+                    <span class="currency num">${{ "{:,.2f}".format(p.nssf_deduction) }}</span>
+                </div>
+                <div class="payslip-line-item">
+                    <span>ពន្ធលើប្រាក់បៀវត្ស (Salary Tax)</span>
+                    <span class="currency num">${{ "{:,.2f}".format(p.salary_tax) }}</span>
+                </div>
+                <div class="payslip-line-item">
+                    <span>កាត់ប្រាក់ខ្ចីមុន (Advance Salary)</span>
+                    <span class="currency num">${{ "{:,.2f}".format(p.advance_salary) }}</span>
+                </div>
+                <div class="payslip-line-item total-line" style="color: #991b1b;">
+                    <span>សរុបការកាត់ប្រាក់ (Total Deductions)</span>
+                    <span class="currency num">${{ "{:,.2f}".format(p.total_deductions) }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Net Salary Grand Highlight Box -->
+        <div class="payslip-net-box">
+            <div>
+                <h3>ប្រាក់បៀវត្សបើកជាក់ស្តែង (NET TAKE-HOME PAY)</h3>
+                <p>សរុបប្រាក់ចំណូល ដកការកាត់កងទាំងអស់ (Gross Pay - Total Deductions)</p>
+                {% if p.notes %}
+                <p style="margin-top: 6px; font-style: italic; opacity: 0.9;">សម្គាល់៖ {{ p.notes }}</p>
+                {% endif %}
+            </div>
+            <div class="payslip-net-amount">
+                <div class="usd">${{ "{:,.2f}".format(p.net_salary) }}</div>
+                <div class="khr">សមមូល៖ ≈ {{ net_khr }} រៀល (KHR)</div>
+            </div>
+        </div>
+
+        <!-- Signature Section -->
+        <div class="payslip-signatures">
+            <div>
+                <div class="sign-title">រៀបចំដោយ (Prepared by HR)</div>
+                <div class="sign-line"></div>
+                <div class="sign-name">ផ្នែកធនធានមនុស្ស</div>
+            </div>
+            <div>
+                <div class="sign-title">ផ្ទៀងផ្ទាត់ដោយ (Verified by Finance)</div>
+                <div class="sign-line"></div>
+                <div class="sign-name">ប្រធានគណនេយ្យករ</div>
+            </div>
+            <div>
+                <div class="sign-title">ហត្ថលេខាបុគ្គលិក (Employee Signature)</div>
+                <div class="sign-line"></div>
+                <div class="sign-name">{{ p.employee.full_name_kh }}</div>
+            </div>
+        </div>
+
+        <!-- Footer Notice -->
+        <div style="text-align: center; margin-top: 36px; font-size: 11px; color: #94a3b8;">
+            វិក្កយបត្រនេះត្រូវបានបង្កើតឡើងដោយប្រព័ន្ធស្វ័យប្រវត្តិ HRMS Cambodia ស្របតាមច្បាប់ស្តីពីការងារនៃព្រះរាជាណាចក្រកម្ពុជា។
+        </div>
+    </div>
+</body>
+</html>

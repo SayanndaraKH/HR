@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block title %}របាយការណ៍ចំណាយប្រាក់បៀវត្ស (Payroll Expense Report) - HRMS{% endblock %}
+{% block page_title %}របាយការណ៍ចំណាយប្រាក់បៀវត្ស (Payroll Expense Analytics){% endblock %}
+{% block page_subtitle %}សរុបការចំណាយប្រាក់ខែក្រុមហ៊ុនទាំងមូល និងការបែងចែកចំណាយផ្អែកតាមនាយកដ្ឋាននីមួយៗ{% endblock %}
+
+{% block topbar_actions %}
+    <a href="{{ url_for('payroll_export_csv', month=selected_month) }}" class="btn btn-success">
+        <i class="fa-solid fa-file-excel"></i> Export CSV Report
+    </a>
+    <a href="{{ url_for('payroll_list', month=selected_month) }}" class="btn btn-secondary">
+        <i class="fa-solid fa-arrow-left"></i> បញ្ជីប្រាក់ខែ
+    </a>
+{% endblock %}
+
+{% block content %}
+<!-- Filter Bar -->
+<div class="filter-bar">
+    <form method="GET" action="{{ url_for('payroll_report') }}" style="display: flex; gap: 14px; align-items: center;">
+        <label class="form-label" style="margin: 0; white-space: nowrap;"><i class="fa-regular fa-calendar"></i> ជ្រើសរើសខែ/ឆ្នាំ៖</label>
+        <input type="month" name="month" value="{{ selected_month }}" class="form-control" style="width: 170px;" onchange="this.form.submit()">
+    </form>
+
+    <div style="font-size: 13.5px; color: var(--text-muted);">
+        របាយការណ៍ចំណាយក្រុមហ៊ុនសរុបប្រចាំខែ <strong class="num">{{ selected_month }}</strong>
+    </div>
+</div>
+
+<!-- Total Company KPI Cards -->
+<div class="grid-kpi">
+    <div class="kpi-card" style="--kpi-color: #4f46e5; --kpi-bg: #eef2ff;">
+        <div class="kpi-info">
+            <h3>ចំណាយប្រាក់ខែសរុប (Gross)</h3>
+            <div class="kpi-number currency">${{ "{:,.2f}".format(total_company_gross) }}</div>
+            <div class="kpi-subtext">រួមបញ្ចូលប្រាក់គោល និងប្រាក់បន្ថែម</div>
+        </div>
+        <div class="kpi-icon"><i class="fa-solid fa-calculator"></i></div>
+    </div>
+
+    <div class="kpi-card" style="--kpi-color: #10b981; --kpi-bg: #ecfdf5;">
+        <div class="kpi-info">
+            <h3>ប្រាក់ត្រូវបើកជាក់ស្តែង (Net Pay)</h3>
+            <div class="kpi-number currency" style="color: #059669;">${{ "{:,.2f}".format(total_company_net) }}</div>
+            <div class="kpi-subtext">ចំណាយសរុបដែលបានទូទាត់ជូនបុគ្គលិក</div>
+        </div>
+        <div class="kpi-icon"><i class="fa-solid fa-wallet"></i></div>
+    </div>
+
+    <div class="kpi-card" style="--kpi-color: #f59e0b; --kpi-bg: #fffbeb;">
+        <div class="kpi-info">
+            <h3>ពន្ធលើប្រាក់បៀវត្ស (Salary Tax)</h3>
+            <div class="kpi-number currency" style="color: #d97706;">${{ "{:,.2f}".format(total_company_tax) }}</div>
+            <div class="kpi-subtext">ប្រកាសពន្ធជូនអគ្គនាយកដ្ឋានពន្ធដារ (GDT)</div>
+        </div>
+        <div class="kpi-icon"><i class="fa-solid fa-landmark"></i></div>
+    </div>
+
+    <div class="kpi-card" style="--kpi-color: #0ea5e9; --kpi-bg: #f0f9ff;">
+        <div class="kpi-info">
+            <h3>ភាគទាន ប.ស.ស (NSSF Pension)</h3>
+            <div class="kpi-number currency" style="color: #0284c7;">${{ "{:,.2f}".format(total_company_nssf) }}</div>
+            <div class="kpi-subtext">បង់ជូនបេឡាជាតិសន្តិសុខសង្គម</div>
+        </div>
+        <div class="kpi-icon"><i class="fa-solid fa-shield-heart"></i></div>
+    </div>
+</div>
+
+<!-- Department Expense Chart -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <i class="fa-solid fa-chart-column text-primary"></i>
+            ក្រាហ្វិកប្រៀបធៀបចំណាយប្រាក់បៀវត្សតាមនាយកដ្ឋាន (Department Expense Chart)
+        </div>
+    </div>
+    <div style="height: 320px; position: relative;">
+        <canvas id="deptExpenseChart"></canvas>
+    </div>
+</div>
+
+<!-- Department Summary Table -->
+<div class="card" style="padding: 0; overflow: hidden;">
+    <div class="card-header" style="padding: 16px 20px; margin-bottom: 0;">
+        <div class="card-title">
+            <i class="fa-solid fa-table-list"></i>
+            តារាងសង្ខេបចំណាយផ្អែកតាមនាយកដ្ឋាននីមួយៗ (Department Expense Breakdown)
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table-custom">
+            <thead>
+                <tr>
+                    <th>នាយកដ្ឋាន</th>
+                    <th style="text-align: center;">ចំនួនបុគ្គលិក</th>
+                    <th>ប្រាក់ខែសរុប (Gross)</th>
+                    <th>ម៉ោងបន្ថែម (OT)</th>
+                    <th>ពន្ធលើប្រាក់ខែ</th>
+                    <th>ប.ស.ស (NSSF)</th>
+                    <th>ប្រាក់ខែបើកជាក់ស្តែង (Net Pay)</th>
+                    <th>សមាមាត្រ %</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in dept_summary %}
+                {% set pct = (item.net / total_company_net * 100) if total_company_net > 0 else 0 %}
+                <tr>
+                    <td>
+                        <strong>{{ item.department.name_kh }}</strong>
+                        <div class="emp-sub-text num">{{ item.department.code }} • {{ item.department.name_en }}</div>
+                    </td>
+                    <td style="text-align: center;">
+                        <span class="badge badge-secondary num">{{ item.count }} នាក់</span>
+                    </td>
+                    <td class="currency num">${{ "{:,.2f}".format(item.gross) }}</td>
+                    <td class="currency num" style="color: var(--primary);">${{ "{:,.2f}".format(item.ot) }}</td>
+                    <td class="currency num" style="color: #d97706;">${{ "{:,.2f}".format(item.tax) }}</td>
+                    <td class="currency num" style="color: #0284c7;">${{ "{:,.2f}".format(item.nssf) }}</td>
+                    <td>
+                        <strong class="currency num" style="color: #059669; font-size: 15px;">
+                            ${{ "{:,.2f}".format(item.net) }}
+                        </strong>
+                    </td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div style="flex: 1; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden;">
+                                <div style="width: {{ pct }}%; height: 100%; background: var(--primary);"></div>
+                            </div>
+                            <span class="num" style="font-size: 12px; font-weight: 600;">{{ "{:,.1f}".format(pct) }}%</span>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr style="background: #f8fafc; font-weight: 700; border-top: 2px solid var(--card-border);">
+                    <td>សរុបក្រុមហ៊ុនទាំងមូល</td>
+                    <td style="text-align: center;" class="num">{{ dept_summary|sum(attribute='count') }} នាក់</td>
+                    <td class="currency num">${{ "{:,.2f}".format(total_company_gross) }}</td>
+                    <td class="currency num" style="color: var(--primary);">${{ "{:,.2f}".format(dept_summary|sum(attribute='ot')) }}</td>
+                    <td class="currency num" style="color: #d97706;">${{ "{:,.2f}".format(total_company_tax) }}</td>
+                    <td class="currency num" style="color: #0284c7;">${{ "{:,.2f}".format(total_company_nssf) }}</td>
+                    <td class="currency num" style="color: #059669; font-size: 16px;">${{ "{:,.2f}".format(total_company_net) }}</td>
+                    <td class="num">100%</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const chartLabels = {{ chart_labels | tojson }};
+    const chartValues = {{ chart_values | tojson }};
+
+    const ctx = document.getElementById('deptExpenseChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: chartLabels,
+            datasets: [{
+                label: 'ចំណាយប្រាក់បៀវត្ស Net Pay (USD)',
+                data: chartValues,
+                backgroundColor: [
+                    'rgba(79, 70, 229, 0.85)',
+                    'rgba(16, 185, 129, 0.85)',
+                    'rgba(245, 158, 11, 0.85)',
+                    'rgba(14, 165, 233, 0.85)',
+                    'rgba(139, 92, 246, 0.85)'
+                ],
+                borderRadius: 8,
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(val) { return '$' + val; }
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

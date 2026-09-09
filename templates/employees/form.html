@@ -1,0 +1,668 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if is_edit %}កែប្រែប្រវត្តិរូបបុគ្គលិក - {{ emp.full_name_kh }}{% else %}បញ្ចូលប្រវត្តិរូបសង្ខេបបុគ្គលិកថ្មី (ទម្រង់ផ្លូវការ) - HRMS{% endif %}
+{% endblock %}
+
+{% block page_title %}
+    {% if is_edit %}កែសម្រួលប្រវត្តិរូបសង្ខេបបុគ្គលិក{% else %}បញ្ចូលប្រវត្តិរូបសង្ខេបបុគ្គលិកថ្មី (New Employee Biography){% endif %}
+{% endblock %}
+
+{% block page_subtitle %}
+    ទម្រង់ប្រវត្តិរូបសង្ខេបស្ដង់ដារផ្លូវការកម្ពុជា ១០០% (Standard Official Khmer CV Format)
+{% endblock %}
+
+{% block topbar_actions %}
+    <a href="{{ url_for('employee_list') }}" class="btn btn-secondary">
+        <i class="fa-solid fa-arrow-left"></i> ត្រឡប់ទៅបញ្ជីបុគ្គលិក
+    </a>
+{% endblock %}
+
+{% block content %}
+<div style="max-width: 920px; margin: 0 auto;">
+    <form method="POST" action="" enctype="multipart/form-data">
+        <!-- Main Form Paper / Card -->
+        <div class="card" style="padding: 36px 40px; border-top: 4px solid var(--primary); box-shadow: var(--shadow-md);">
+            
+            <!-- Official Header Section matching doc/01.png -->
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; padding-bottom: 20px; border-bottom: 2px solid #0f172a;">
+                <div style="flex: 1; text-align: center; padding-left: 120px;">
+                    <h2 style="font-size: 20px; font-weight: 800; color: #0f172a; letter-spacing: 0.5px;">ព្រះរាជាណាចក្រកម្ពុជា</h2>
+                    <h3 style="font-size: 17px; font-weight: 700; color: #0f172a; margin-top: 4px;">ជាតិ សាសនា ព្រះមហាក្សត្រ</h3>
+                    <div style="margin: 8px auto; width: 60px; border-bottom: 2px solid #0f172a;"></div>
+                    <h1 style="font-size: 24px; font-weight: 800; color: var(--primary); margin-top: 14px; text-decoration: underline; text-underline-offset: 6px;">
+                        ប្រវត្តិរូបសង្ខេប
+                    </h1>
+                </div>
+
+                <!-- 4x6 Photo Upload Box matching doc/01.png -->
+                <div style="width: 130px; height: 165px; border: 2px dashed #94a3b8; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 8px; background: #f8fafc; position: relative; cursor: pointer;"
+                     onclick="document.getElementById('avatar-input').click();">
+                    {% if is_edit and emp.avatar %}
+                    <img id="avatar-preview" src="{{ url_for('serve_upload', folder='avatars', filename=emp.avatar) }}" 
+                         alt="រូបថត ៤x៦" style="width: 100%; height: 100%; object-fit: cover; border-radius: 6px;">
+                    {% else %}
+                    <img id="avatar-preview" src="" alt="Preview" style="display: none; width: 100%; height: 100%; object-fit: cover; border-radius: 6px;">
+                    <div id="avatar-placeholder" style="color: #64748b;">
+                        <i class="fa-solid fa-camera" style="font-size: 28px; margin-bottom: 6px; color: var(--primary);"></i>
+                        <div style="font-size: 13px; font-weight: 700;">រូបថតបច្ចុប្បន្ន</div>
+                        <div style="font-size: 12px; font-weight: 600; font-family: var(--font-en);">៤ x ៦</div>
+                    </div>
+                    {% endif %}
+                    <input type="file" name="avatar" id="avatar-input" style="display: none;" accept="image/*" onchange="previewAvatar(this);">
+                </div>
+            </div>
+
+            <!-- ១. នាមត្រកូល នាមខ្លួន (ឈ្មោះខ្មែរ & ឡាតាំង) -->
+            <div class="form-row" style="margin-bottom: 16px;">
+                <div class="form-group" style="flex: 1.2;">
+                    <label class="form-label">
+                        <strong>នាមត្រកូល, នាមខ្លួន (Full Name - Khmer)</strong> <span style="color: var(--danger);">*</span>
+                    </label>
+                    <input type="text" name="full_name_kh" class="form-control" placeholder="ឧ. សុខ ពិសិដ្ឋ" required
+                           value="{{ emp.full_name_kh if is_edit else '' }}">
+                </div>
+
+                <div class="form-group" style="flex: 1;">
+                    <label class="form-label">
+                        <strong>ជាអក្សរឡាតាំង (In Latin Script)</strong> <span style="color: var(--danger);">*</span>
+                    </label>
+                    <input type="text" name="full_name_en" class="form-control" placeholder="e.g. Sok Piseth" required
+                           value="{{ emp.full_name_en if is_edit else '' }}">
+                </div>
+            </div>
+
+            <!-- ២. ភេទ, ជនជាតិ, សញ្ជាតិ -->
+            <div class="form-row" style="margin-bottom: 16px;">
+                <div class="form-group">
+                    <label class="form-label"><strong>ភេទ (Gender)</strong> <span style="color: var(--danger);">*</span></label>
+                    <select name="gender" class="form-select">
+                        <option value="ប្រុស" {% if is_edit and emp.gender == 'ប្រុស' %}selected{% endif %}>ប្រុស (Male)</option>
+                        <option value="ស្រី" {% if is_edit and emp.gender == 'ស្រី' %}selected{% endif %}>ស្រី (Female)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label"><strong>ជនជាតិ (Ethnicity)</strong></label>
+                    <input type="text" name="ethnicity" class="form-control" placeholder="ខ្មែរ"
+                           value="{{ emp.ethnicity if is_edit and emp.ethnicity else 'ខ្មែរ' }}">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label"><strong>សញ្ជាតិ (Nationality)</strong></label>
+                    <input type="text" name="nationality" class="form-control" placeholder="ខ្មែរ"
+                           value="{{ emp.nationality if is_edit and emp.nationality else 'ខ្មែរ' }}">
+                </div>
+            </div>
+
+            <!-- ៣. ថ្ងៃខែឆ្នាំកំណើត -->
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label class="form-label">
+                    <strong>ថ្ងៃខែឆ្នាំកំណើត (Date of Birth)</strong> <span style="color: var(--danger);">*</span>
+                </label>
+                <input type="date" name="dob" class="form-control" style="max-width: 320px;"
+                       value="{{ emp.dob.strftime('%Y-%m-%d') if is_edit and emp.dob else '' }}" required>
+            </div>
+
+            <!-- ៤. ទីកន្លែងកំណើត (Place of Birth) -->
+            <div style="background: #f8fafc; border: 1px solid var(--card-border); border-radius: var(--radius-md); padding: 16px 18px; margin-bottom: 18px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <label class="form-label" style="font-size: 14px; color: var(--primary); margin: 0;">
+                        <i class="fa-solid fa-map-location-dot"></i> <strong>ទីកន្លែងកំណើត (Place of Birth)</strong>
+                    </label>
+                    <span style="font-size: 12px; color: var(--text-muted);">
+                        <i class="fa-solid fa-circle-check text-success"></i> ទិន្នន័យរដ្ឋបាលកម្ពុជា ២០២៥ (ខេត្ត &rarr; ស្រុក &rarr; ឃុំ)
+                    </span>
+                </div>
+                <div class="form-row">
+                    <div class="form-group" style="margin-bottom: 8px; flex: 1.1;">
+                        <label class="form-label" style="font-size: 12.5px;">រាជធានី / ខេត្ត (Capital / Province)</label>
+                        <select name="pob_province" id="pob_province" class="form-select">
+                            <option value="">-- ជ្រើសរើសខេត្ត/រាជធានី --</option>
+                            {% for p in provinces_list %}
+                            <option value="{{ p.name_kh }}" data-code="{{ p.code }}"
+                                    {% if is_edit and emp.pob_province == p.name_kh %}selected{% endif %}>
+                                {{ p.name_kh }} ({{ p.name_en }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 8px; flex: 1.1;">
+                        <label class="form-label" style="font-size: 12.5px;">ក្រុង / ស្រុក / ខណ្ឌ (District / Khan)</label>
+                        <select name="pob_district" id="pob_district" class="form-select">
+                            <option value="">-- ជ្រើសរើសស្រុក/ខណ្ឌ --</option>
+                            {% if is_edit and emp.pob_district %}
+                            <option value="{{ emp.pob_district }}" selected>{{ emp.pob_district }}</option>
+                            {% endif %}
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 8px; flex: 1.1;">
+                        <label class="form-label" style="font-size: 12.5px;">ឃុំ / សង្កាត់ (Commune / Sangkat)</label>
+                        <select name="pob_commune" id="pob_commune" class="form-select">
+                            <option value="">-- ជ្រើសរើសឃុំ/សង្កាត់ --</option>
+                            {% if is_edit and emp.pob_commune %}
+                            <option value="{{ emp.pob_commune }}" selected>{{ emp.pob_commune }}</option>
+                            {% endif %}
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 8px; flex: 0.9;">
+                        <label class="form-label" style="font-size: 12.5px;">ភូមិ (Village)</label>
+                        <input type="text" name="pob_village" id="pob_village" class="form-control" placeholder="ឧ. ព្រែកតាពៅ"
+                               value="{{ emp.pob_village if is_edit else '' }}">
+                    </div>
+                </div>
+            </div>
+
+            <!-- ៥. កម្រិតវប្បធម៌សិក្សា & ឯកទេស -->
+            <div class="form-row" style="margin-bottom: 16px;">
+                <div class="form-group">
+                    <label class="form-label"><strong>កម្រិតវប្បធម៌សិក្សា (Education Level)</strong></label>
+                    <input type="text" name="education_level" class="form-control" placeholder="ឧ. បរិញ្ញាបត្រ, មធ្យមសិក្សា..."
+                           value="{{ emp.education_level if is_edit else '' }}">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label"><strong>ឯកទេស (Major / Specialization)</strong></label>
+                    <input type="text" name="education_major" class="form-control" placeholder="ឧ. វិទ្យាសាស្ត្រកុំព្យូទ័រ, គណនេយ្យ..."
+                           value="{{ emp.education_major if is_edit else '' }}">
+                </div>
+            </div>
+
+            <!-- ៦. ចំណេះដឹងភាសាបរទេស -->
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label class="form-label"><strong>ចំណេះដឹងភាសាបរទេស (Foreign Languages)</strong></label>
+                <input type="text" name="foreign_languages" class="form-control" placeholder="ឧ. អង់គ្លេស (ល្អបង្គួរ), ចិន (សន្ទនា)"
+                       value="{{ emp.foreign_languages if is_edit else '' }}">
+            </div>
+
+            <!-- ៧. មុខជំនាញផ្សេងៗ -->
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label class="form-label"><strong>មុខជំនាញផ្សេងៗ (Other Skills / Expertise)</strong></label>
+                <input type="text" name="other_skills" class="form-control" placeholder="ឧ. កុំព្យូទ័ររដ្ឋបាល, Graphic Design, Leadership"
+                       value="{{ emp.other_skills if is_edit else '' }}">
+            </div>
+
+            <!-- ៨. ស្ថានភាពគ្រួសារ -->
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label class="form-label"><strong>ស្ថានភាពគ្រួសារ (Marital Status)</strong></label>
+                <div style="display: flex; gap: 28px; padding-top: 4px;">
+                    <label style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <input type="radio" name="marital_status" value="នៅលីវ" 
+                               {% if not is_edit or emp.marital_status == 'នៅលីវ' %}checked{% endif %}>
+                        <span>នៅលីវ (Single)</span>
+                    </label>
+                    <label style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <input type="radio" name="marital_status" value="មានប្តី ឬប្រពន្ធ"
+                               {% if is_edit and emp.marital_status == 'មានប្តី ឬប្រពន្ធ' %}checked{% endif %}>
+                        <span>មានប្តី ឬប្រពន្ធ (Married)</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- ៩. បទពិសោធន៍ការងារ (Work Experience 1, 2, 3) -->
+            <div style="background: #f8fafc; border: 1px solid var(--card-border); border-radius: var(--radius-md); padding: 16px 18px; margin-bottom: 20px;">
+                <label class="form-label" style="font-size: 14px; color: var(--primary); margin-bottom: 10px;">
+                    <i class="fa-solid fa-business-time"></i> <strong>បទពិសោធន៍ការងារ (Work Experience)</strong>
+                </label>
+                <div class="form-group" style="margin-bottom: 10px;">
+                    <label class="form-label" style="font-size: 12.5px;">១. បទពិសោធន៍ទី ១</label>
+                    <input type="text" name="work_experience_1" class="form-control" placeholder="ឆ្នាំ... ស្ថាប័ន... តួនាទី..."
+                           value="{{ emp.work_experience_1 if is_edit else '' }}">
+                </div>
+                <div class="form-group" style="margin-bottom: 10px;">
+                    <label class="form-label" style="font-size: 12.5px;">២. បទពិសោធន៍ទី ២</label>
+                    <input type="text" name="work_experience_2" class="form-control" placeholder="ឆ្នាំ... ស្ថាប័ន... តួនាទី..."
+                           value="{{ emp.work_experience_2 if is_edit else '' }}">
+                </div>
+                <div class="form-group" style="margin-bottom: 4px;">
+                    <label class="form-label" style="font-size: 12.5px;">៣. បទពិសោធន៍ទី ៣</label>
+                    <input type="text" name="work_experience_3" class="form-control" placeholder="ឆ្នាំ... ស្ថាប័ន... តួនាទី..."
+                           value="{{ emp.work_experience_3 if is_edit else '' }}">
+                </div>
+            </div>
+
+            <!-- ១០. ព័ត៌មានឪពុក -->
+            <div style="background: #f8fafc; border: 1px solid var(--card-border); border-radius: var(--radius-md); padding: 16px 18px; margin-bottom: 18px;">
+                <label class="form-label" style="font-size: 14px; color: #0f172a; margin-bottom: 10px;">
+                    <i class="fa-solid fa-person"></i> <strong>ព័ត៌មានឪពុក (Father's Information)</strong>
+                </label>
+                <div class="form-row">
+                    <div class="form-group" style="flex: 1.2;">
+                        <label class="form-label" style="font-size: 12.5px;">ឪពុកឈ្មោះ (Name)</label>
+                        <input type="text" name="father_name" class="form-control" placeholder="ឈ្មោះឪពុក..."
+                               value="{{ emp.father_name if is_edit else '' }}">
+                    </div>
+                    <div class="form-group" style="flex: 0.5;">
+                        <label class="form-label" style="font-size: 12.5px;">អាយុ (Age)</label>
+                        <input type="text" name="father_age" class="form-control num" placeholder="អាយុ..."
+                               value="{{ emp.father_age if is_edit else '' }}">
+                    </div>
+                    <div class="form-group" style="flex: 0.6;">
+                        <label class="form-label" style="font-size: 12.5px;">ជនជាតិ (Ethnicity)</label>
+                        <input type="text" name="father_nationality" class="form-control" placeholder="ខ្មែរ"
+                               value="{{ emp.father_nationality if is_edit and emp.father_nationality else 'ខ្មែរ' }}">
+                    </div>
+                    <div class="form-group" style="flex: 0.8;">
+                        <label class="form-label" style="font-size: 12.5px;">ស្ថានភាពជីវិត</label>
+                        <div style="display: flex; gap: 14px; padding-top: 8px;">
+                            <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                                <input type="radio" name="father_status" value="រស់" 
+                                       {% if not is_edit or emp.father_status == 'រស់' %}checked{% endif %}> រស់
+                            </label>
+                            <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                                <input type="radio" name="father_status" value="ស្លាប់"
+                                       {% if is_edit and emp.father_status == 'ស្លាប់' %}checked{% endif %}> ស្លាប់
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group" style="margin-bottom: 4px;">
+                    <label class="form-label" style="font-size: 12.5px;">មុខរបរ (Occupation)</label>
+                    <input type="text" name="father_job" class="form-control" placeholder="មុខរបរឪពុក..."
+                           value="{{ emp.father_job if is_edit else '' }}">
+                </div>
+            </div>
+
+            <!-- ១១. ព័ត៌មានម្តាយ -->
+            <div style="background: #f8fafc; border: 1px solid var(--card-border); border-radius: var(--radius-md); padding: 16px 18px; margin-bottom: 20px;">
+                <label class="form-label" style="font-size: 14px; color: #0f172a; margin-bottom: 10px;">
+                    <i class="fa-solid fa-person-dress"></i> <strong>ព័ត៌មានម្តាយ (Mother's Information)</strong>
+                </label>
+                <div class="form-row">
+                    <div class="form-group" style="flex: 1.2;">
+                        <label class="form-label" style="font-size: 12.5px;">ម្តាយឈ្មោះ (Name)</label>
+                        <input type="text" name="mother_name" class="form-control" placeholder="ឈ្មោះម្តាយ..."
+                               value="{{ emp.mother_name if is_edit else '' }}">
+                    </div>
+                    <div class="form-group" style="flex: 0.5;">
+                        <label class="form-label" style="font-size: 12.5px;">អាយុ (Age)</label>
+                        <input type="text" name="mother_age" class="form-control num" placeholder="អាយុ..."
+                               value="{{ emp.mother_age if is_edit else '' }}">
+                    </div>
+                    <div class="form-group" style="flex: 0.6;">
+                        <label class="form-label" style="font-size: 12.5px;">ជនជាតិ (Ethnicity)</label>
+                        <input type="text" name="mother_nationality" class="form-control" placeholder="ខ្មែរ"
+                               value="{{ emp.mother_nationality if is_edit and emp.mother_nationality else 'ខ្មែរ' }}">
+                    </div>
+                    <div class="form-group" style="flex: 0.8;">
+                        <label class="form-label" style="font-size: 12.5px;">ស្ថានភាពជីវិត</label>
+                        <div style="display: flex; gap: 14px; padding-top: 8px;">
+                            <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                                <input type="radio" name="mother_status" value="រស់" 
+                                       {% if not is_edit or emp.mother_status == 'រស់' %}checked{% endif %}> រស់
+                            </label>
+                            <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                                <input type="radio" name="mother_status" value="ស្លាប់"
+                                       {% if is_edit and emp.mother_status == 'ស្លាប់' %}checked{% endif %}> ស្លាប់
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group" style="margin-bottom: 4px;">
+                    <label class="form-label" style="font-size: 12.5px;">មុខរបរ (Occupation)</label>
+                    <input type="text" name="mother_job" class="form-control" placeholder="មុខរបរម្តាយ..."
+                           value="{{ emp.mother_job if is_edit else '' }}">
+                </div>
+            </div>
+
+            <!-- ១២. អាសយដ្ឋានបច្ចុប្បន្ន -->
+            <div style="background: #f8fafc; border: 1px solid var(--card-border); border-radius: var(--radius-md); padding: 16px 18px; margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <label class="form-label" style="font-size: 14px; color: var(--primary); margin: 0;">
+                        <i class="fa-solid fa-house-user"></i> <strong>១២. អាសយដ្ឋានបច្ចុប្បន្ន (Current Address)</strong>
+                    </label>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="copyPobToCurrent();" style="font-size: 12px; padding: 4px 12px;">
+                        <i class="fa-solid fa-copy"></i> ចម្លងដូចទីកន្លែងកំណើត
+                    </button>
+                </div>
+                <div class="form-row" style="margin-bottom: 10px;">
+                    <div class="form-group" style="flex: 0.7;">
+                        <label class="form-label" style="font-size: 12.5px;">ផ្ទះលេខ (House No)</label>
+                        <input type="text" name="current_house_no" id="current_house_no" class="form-control" placeholder="លេខ..."
+                               value="{{ emp.current_house_no if is_edit else '' }}">
+                    </div>
+                    <div class="form-group" style="flex: 0.7;">
+                        <label class="form-label" style="font-size: 12.5px;">ផ្លូវលេខ (Street No)</label>
+                        <input type="text" name="current_street_no" id="current_street_no" class="form-control" placeholder="ផ្លូវ..."
+                               value="{{ emp.current_street_no if is_edit else '' }}">
+                    </div>
+                    <div class="form-group" style="flex: 1.1;">
+                        <label class="form-label" style="font-size: 12.5px;">រាជធានី / ខេត្ត (Capital / Province)</label>
+                        <select name="current_province" id="current_province" class="form-select">
+                            <option value="">-- ជ្រើសរើសខេត្ត/រាជធានី --</option>
+                            {% for p in provinces_list %}
+                            <option value="{{ p.name_kh }}" data-code="{{ p.code }}"
+                                    {% if is_edit and emp.current_province == p.name_kh %}selected{% endif %}>
+                                {{ p.name_kh }} ({{ p.name_en }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group" style="flex: 1.1;">
+                        <label class="form-label" style="font-size: 12.5px;">ក្រុង / ស្រុក / ខណ្ឌ (District / Khan)</label>
+                        <select name="current_district" id="current_district" class="form-select">
+                            <option value="">-- ជ្រើសរើសស្រុក/ខណ្ឌ --</option>
+                            {% if is_edit and emp.current_district %}
+                            <option value="{{ emp.current_district }}" selected>{{ emp.current_district }}</option>
+                            {% endif %}
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 1.1;">
+                        <label class="form-label" style="font-size: 12.5px;">ឃុំ / សង្កាត់ (Commune / Sangkat)</label>
+                        <select name="current_commune" id="current_commune" class="form-select">
+                            <option value="">-- ជ្រើសរើសឃុំ/សង្កាត់ --</option>
+                            {% if is_edit and emp.current_commune %}
+                            <option value="{{ emp.current_commune }}" selected>{{ emp.current_commune }}</option>
+                            {% endif %}
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 0.9;">
+                        <label class="form-label" style="font-size: 12.5px;">ភូមិ (Village)</label>
+                        <input type="text" name="current_village" id="current_village" class="form-control" placeholder="ភូមិ..."
+                               value="{{ emp.current_village if is_edit else '' }}">
+                    </div>
+                </div>
+            </div>
+
+            <!-- ១៣. ទំនាក់ទំនង (Phone, Email, National ID) -->
+            <div class="form-row" style="margin-bottom: 24px;">
+                <div class="form-group">
+                    <label class="form-label">
+                        <strong>លេខទូរស័ព្ទ ÷ (Phone Number)</strong> <span style="color: var(--danger);">*</span>
+                    </label>
+                    <input type="text" name="phone" class="form-control num" placeholder="012 345 678" required
+                           value="{{ emp.phone if is_edit else '' }}">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        <strong>អ៊ីម៉ែល (Email Address)</strong>
+                    </label>
+                    <input type="email" name="email" class="form-control num" placeholder="name@company.com"
+                           value="{{ emp.email if is_edit else '' }}">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        <strong>លេខអត្តសញ្ញាណប័ណ្ណ (National ID)</strong>
+                    </label>
+                    <input type="text" name="national_id" class="form-control num" placeholder="010xxxxxx"
+                           value="{{ emp.national_id if is_edit else '' }}">
+                </div>
+            </div>
+
+            <!-- ១៤. ព័ត៌មានការងារក្នុងក្រុមហ៊ុន (Employment & Salary Info) -->
+            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: var(--radius-md); padding: 18px 20px; margin-bottom: 24px;">
+                <label class="form-label" style="font-size: 14.5px; color: #1e40af; margin-bottom: 12px;">
+                    <i class="fa-solid fa-building-user"></i> <strong>ព័ត៌មានការងារក្នុងក្រុមហ៊ុន (Company Employment Details)</strong>
+                </label>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">លេខកូដបុគ្គលិក (Employee ID) <span style="color: var(--danger);">*</span></label>
+                        <input type="text" name="emp_code" class="form-control num" required
+                               value="{{ emp.emp_code if is_edit else suggested_code }}" {% if is_edit %}readonly{% endif %}>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">ការិយាល័យ / ផ្នែក (Office) <span style="color: var(--danger);">*</span></label>
+                        <select name="department_id" class="form-select" required>
+                            <option value="">-- ជ្រើសរើសការិយាល័យ --</option>
+                            {% for d in departments %}
+                            <option value="{{ d.id }}" {% if (is_edit and emp.department_id == d.id) or (not is_edit and loop.first) %}selected{% endif %}>
+                                {{ d.name_kh }} ({{ d.code }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">តួនាទី / មុខតំណែង (Position) <span style="color: var(--danger);">*</span></label>
+                        <select name="position" class="form-select" required>
+                            <option value="">-- ជ្រើសរើសតួនាទី --</option>
+                            {% for pos in official_positions %}
+                            <option value="{{ pos }}" {% if (is_edit and emp.position == pos) or (not is_edit and pos == 'បុគ្គលិក') %}selected{% endif %}>
+                                {{ pos }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">ថ្ងៃចូលការងារ (Hire Date)</label>
+                        <input type="date" name="hire_date" class="form-control"
+                               value="{{ emp.hire_date.strftime('%Y-%m-%d') if is_edit and emp.hire_date else today.strftime('%Y-%m-%d') }}">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">ស្ថានភាពការងារ (Status)</label>
+                        <select name="status" class="form-select">
+                            <option value="active" {% if is_edit and emp.status == 'active' %}selected{% endif %}>សកម្ម (Active)</option>
+                            <option value="probation" {% if is_edit and emp.status == 'probation' %}selected{% endif %}>សាកល្បង (Probation)</option>
+                            <option value="resigned" {% if is_edit and emp.status == 'resigned' %}selected{% endif %}>លាលែង (Resigned)</option>
+                            <option value="terminated" {% if is_edit and emp.status == 'terminated' %}selected{% endif %}>បញ្ឈប់ (Terminated)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">ប្រាក់ខែគោល (Base Salary - USD) <span style="color: var(--danger);">*</span></label>
+                        <div class="input-icon-wrap">
+                            <i class="fa-solid fa-dollar-sign"></i>
+                            <input type="number" step="0.01" name="base_salary" class="form-control num" placeholder="500.00" required
+                                   value="{{ emp.base_salary if is_edit else '500.00' }}">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">គណនីធនាគារ (Bank Account)</label>
+                        <input type="text" name="bank_account" class="form-control" placeholder="001 234 567 (ABA)"
+                               value="{{ emp.bank_account if is_edit else '' }}">
+                    </div>
+                </div>
+            </div>
+
+            {% if not is_edit %}
+            <!-- ឯកសារភ្ជាប់ដំបូង (Initial Documents) -->
+            <div style="background: #f8fafc; border: 1px solid var(--card-border); border-radius: var(--radius-md); padding: 16px 18px; margin-bottom: 24px;">
+                <label class="form-label" style="font-size: 14px; color: var(--text-main); margin-bottom: 10px;">
+                    <i class="fa-solid fa-paperclip"></i> <strong>ឯកសារភ្ជាប់ដំបូង (Initial Attachment) - ស្រេចចិត្ត</strong>
+                </label>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" style="font-size: 12.5px;">ប្រភេទឯកសារ</label>
+                        <select name="document_type" class="form-select">
+                            <option value="contract">កិច្ចសន្យាការងារ (Contract)</option>
+                            <option value="id_card">អត្តសញ្ញាណប័ណ្ណ / Passport (ID)</option>
+                            <option value="cv">ប្រវត្តិរូបសង្ខេប (CV / Resume)</option>
+                            <option value="other">ផ្សេងៗ</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" style="font-size: 12.5px;">ចំណងជើងឯកសារ</label>
+                        <input type="text" name="document_title" class="form-control" placeholder="ឧ. កិច្ចសន្យាការងារ">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" style="font-size: 12.5px;">ជ្រើសរើសឯកសារ</label>
+                        <input type="file" name="document_file" class="form-control" accept=".pdf,.doc,.docx,.jpg,.png">
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Declaration Statement matching doc/01.png -->
+            <div style="background: #fafaf9; border-left: 3px solid #78716c; padding: 12px 18px; margin-bottom: 28px; font-size: 13.5px; color: #44403c;">
+                <strong>សេចក្តីបញ្ជាក់៖</strong> « ខ្ញុំបាទ/នាងខ្ញុំ សូមធានាទទួលខុសត្រូវចំពោះមុខច្បាប់ថា ព័ត៌មានខាងលើ និងឯកសារភ្ជាប់ទាំងអស់ ពិតជាត្រឹមត្រូវពិតប្រាកដមែន។ »
+            </div>
+
+            <!-- Form Submit Buttons -->
+            <div style="display: flex; justify-content: flex-end; gap: 14px;">
+                <a href="{{ url_for('employee_list') }}" class="btn btn-secondary btn-lg">បោះបង់ (Cancel)</a>
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    {% if is_edit %}រក្សាទុកការកែប្រែ (Update Biography){% else %}រក្សាទុកប្រវត្តិរូប (Save Biography){% endif %}
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function previewAvatar(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const preview = document.getElementById('avatar-preview');
+                const placeholder = document.getElementById('avatar-placeholder');
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+                if (placeholder) placeholder.style.display = 'none';
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    // Cambodia Geo Cascading Dropdown Handler
+    function setupGeoCascading(provId, distId, commId, initialDistVal, initialCommVal) {
+        const provSelect = document.getElementById(provId);
+        const distSelect = document.getElementById(distId);
+        const commSelect = document.getElementById(commId);
+        if (!provSelect || !distSelect || !commSelect) return;
+
+        async function loadDistricts(selectedDistToSet) {
+            const selectedOption = provSelect.options[provSelect.selectedIndex];
+            const pCode = selectedOption ? selectedOption.getAttribute('data-code') : '';
+            const pName = provSelect.value;
+            
+            distSelect.innerHTML = '<option value="">-- កំពុងផ្ទុកស្រុក/ខណ្ឌ... --</option>';
+            commSelect.innerHTML = '<option value="">-- ជ្រើសរើសឃុំ/សង្កាត់ --</option>';
+            
+            if (!pCode && !pName) {
+                distSelect.innerHTML = '<option value="">-- ជ្រើសរើសស្រុក/ខណ្ឌ --</option>';
+                return;
+            }
+
+            try {
+                const url = pCode ? `/api/geo/districts?province_code=${pCode}` : `/api/geo/districts?province_name=${encodeURIComponent(pName)}`;
+                const res = await fetch(url);
+                const data = await res.json();
+                
+                distSelect.innerHTML = '<option value="">-- ជ្រើសរើសស្រុក/ខណ្ឌ --</option>';
+                let found = false;
+                data.forEach(d => {
+                    const opt = document.createElement('option');
+                    opt.value = d.name_kh;
+                    opt.setAttribute('data-code', d.code);
+                    opt.textContent = `${d.name_kh} (${d.name_en})`;
+                    if (selectedDistToSet && (d.name_kh === selectedDistToSet || d.code === selectedDistToSet)) {
+                        opt.selected = true;
+                        found = true;
+                    }
+                    distSelect.appendChild(opt);
+                });
+                
+                if (selectedDistToSet && !found && selectedDistToSet.trim() !== '') {
+                    const opt = document.createElement('option');
+                    opt.value = selectedDistToSet;
+                    opt.textContent = selectedDistToSet;
+                    opt.selected = true;
+                    distSelect.appendChild(opt);
+                }
+
+                if (distSelect.value) {
+                    await loadCommunes(initialCommVal);
+                }
+            } catch (e) {
+                console.error('Error loading districts:', e);
+                distSelect.innerHTML = '<option value="">-- បរាជ័យក្នុងការផ្ទុក --</option>';
+            }
+        }
+
+        async function loadCommunes(selectedCommToSet) {
+            const selectedOption = distSelect.options[distSelect.selectedIndex];
+            const dCode = selectedOption ? selectedOption.getAttribute('data-code') : '';
+            const dName = distSelect.value;
+
+            commSelect.innerHTML = '<option value="">-- កំពុងផ្ទុកឃុំ/សង្កាត់... --</option>';
+            
+            if (!dCode && !dName) {
+                commSelect.innerHTML = '<option value="">-- ជ្រើសរើសឃុំ/សង្កាត់ --</option>';
+                return;
+            }
+
+            try {
+                const url = dCode ? `/api/geo/communes?district_code=${dCode}` : `/api/geo/communes?district_name=${encodeURIComponent(dName)}`;
+                const res = await fetch(url);
+                const data = await res.json();
+
+                commSelect.innerHTML = '<option value="">-- ជ្រើសរើសឃុំ/សង្កាត់ --</option>';
+                let found = false;
+                data.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.name_kh;
+                    opt.setAttribute('data-code', c.code);
+                    opt.textContent = `${c.name_kh} (${c.name_en})`;
+                    if (selectedCommToSet && (c.name_kh === selectedCommToSet || c.code === selectedCommToSet)) {
+                        opt.selected = true;
+                        found = true;
+                    }
+                    commSelect.appendChild(opt);
+                });
+
+                if (selectedCommToSet && !found && selectedCommToSet.trim() !== '') {
+                    const opt = document.createElement('option');
+                    opt.value = selectedCommToSet;
+                    opt.textContent = selectedCommToSet;
+                    opt.selected = true;
+                    commSelect.appendChild(opt);
+                }
+            } catch (e) {
+                console.error('Error loading communes:', e);
+                commSelect.innerHTML = '<option value="">-- បរាជ័យក្នុងការផ្ទុក --</option>';
+            }
+        }
+
+        provSelect.addEventListener('change', () => loadDistricts());
+        distSelect.addEventListener('change', () => loadCommunes());
+
+        // Trigger initial load if province already selected
+        if (provSelect.value) {
+            loadDistricts(initialDistVal);
+        }
+    }
+
+    function copyPobToCurrent() {
+        const pobProv = document.getElementById('pob_province');
+        const pobDist = document.getElementById('pob_district');
+        const pobComm = document.getElementById('pob_commune');
+        const pobVill = document.getElementById('pob_village');
+
+        const currProv = document.getElementById('current_province');
+        const currVill = document.getElementById('current_village');
+
+        if (pobVill && currVill) currVill.value = pobVill.value;
+        if (pobProv && currProv && pobProv.value) {
+            currProv.value = pobProv.value;
+            const distVal = pobDist ? pobDist.value : '';
+            const commVal = pobComm ? pobComm.value : '';
+            setupGeoCascading('current_province', 'current_district', 'current_commune', distVal, commVal);
+        }
+    }
+
+    // Initialize on DOMContentLoaded
+    document.addEventListener('DOMContentLoaded', function() {
+        const pobDist = {{ (emp.pob_district if is_edit and emp.pob_district else "")|tojson|safe }};
+        const pobComm = {{ (emp.pob_commune if is_edit and emp.pob_commune else "")|tojson|safe }};
+        setupGeoCascading('pob_province', 'pob_district', 'pob_commune', pobDist, pobComm);
+
+        const currDist = {{ (emp.current_district if is_edit and emp.current_district else "")|tojson|safe }};
+        const currComm = {{ (emp.current_commune if is_edit and emp.current_commune else "")|tojson|safe }};
+        setupGeoCascading('current_province', 'current_district', 'current_commune', currDist, currComm);
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,719 @@
+{% extends "base.html" %}
+
+{% block title %}គ្រប់គ្រងរចនាសម្ព័ន្ធ & តួនាទី (Organization & Roles) - HRMS កម្ពុជា{% endblock %}
+{% block page_title %}គ្រប់គ្រងរចនាសម្ព័ន្ធ & តួនាទី (Organization & Roles){% endblock %}
+{% block page_subtitle %}គ្រប់គ្រងការិយាល័យ រចនាសម្ព័ន្ធស្ថាប័ន និងមុខតំណែងតួនាទីបុគ្គលិកទាំងអស់ក្នុងប្រព័ន្ធ{% endblock %}
+
+{% block topbar_actions %}
+<div style="display: flex; gap: 8px;">
+    <button type="button" class="btn btn-secondary" onclick="openCreateDeptModal()" style="border-color: #cbd5e1;">
+        <i class="fa-solid fa-building-circle-plus text-primary"></i> បន្ថែមការិយាល័យថ្មី
+    </button>
+    <button type="button" class="btn btn-primary" onclick="openCreatePosModal()">
+        <i class="fa-solid fa-user-tag"></i> បន្ថែមតួនាទីថ្មី
+    </button>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- KPI Stats Row -->
+<div class="kpi-grid" style="grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px;">
+    <!-- 1. Total Departments -->
+    <div class="kpi-card">
+        <div class="kpi-icon" style="background: var(--primary-light); color: var(--primary);">
+            <i class="fa-solid fa-sitemap"></i>
+        </div>
+        <div class="kpi-info">
+            <span class="kpi-label">ការិយាល័យ/រចនាសម្ព័ន្ធ</span>
+            <div class="kpi-value num">{{ departments|length }}</div>
+            <span class="kpi-subtext">ការិយាល័យផ្លូវការសរុប</span>
+        </div>
+    </div>
+
+    <!-- 2. Total Positions -->
+    <div class="kpi-card">
+        <div class="kpi-icon" style="background: #e0e7ff; color: #4338ca;">
+            <i class="fa-solid fa-briefcase"></i>
+        </div>
+        <div class="kpi-info">
+            <span class="kpi-label">តួនាទី / មុខតំណែង</span>
+            <div class="kpi-value num">{{ positions|length }}</div>
+            <span class="kpi-subtext">ឋានៈ & មុខតំណែងផ្លូវការ</span>
+        </div>
+    </div>
+
+    <!-- 3. Total Assigned Staff -->
+    <div class="kpi-card">
+        <div class="kpi-icon" style="background: var(--success-light); color: var(--success);">
+            <i class="fa-solid fa-users"></i>
+        </div>
+        <div class="kpi-info">
+            <span class="kpi-label">បុគ្គលិកសរុបក្នុងប្រព័ន្ធ</span>
+            <div class="kpi-value num">{{ total_employees }}</div>
+            <span class="kpi-subtext">បម្រើការងារតាមផ្នែកនានា</span>
+        </div>
+    </div>
+
+    <!-- 4. Quick Action Card -->
+    <div class="kpi-card" style="background: linear-gradient(135deg, #f8fafc, #eff6ff); border: 1px solid #bfdbfe;">
+        <div class="kpi-icon" style="background: #dbeafe; color: #1d4ed8;">
+            <i class="fa-solid fa-plus"></i>
+        </div>
+        <div class="kpi-info">
+            <span class="kpi-label" style="color: #1e40af; font-weight: 700;">បញ្ចូលរហ័ស (Quick Add)</span>
+            <div style="display: flex; gap: 8px; margin-top: 6px;">
+                <button type="button" class="btn btn-sm" onclick="openCreateDeptModal()" style="background: #ffffff; border: 1px solid #93c5fd; color: #1d4ed8; font-size: 11.5px; padding: 3px 8px; border-radius: 6px;">
+                    + ការិយាល័យ
+                </button>
+                <button type="button" class="btn btn-sm" onclick="openCreatePosModal()" style="background: #1d4ed8; color: #ffffff; border: none; font-size: 11.5px; padding: 3px 8px; border-radius: 6px;">
+                    + តួនាទី
+                </button>
+            </div>
+            <span class="kpi-subtext" style="margin-top: 4px;">បន្ថែមភ្លាមៗទៅក្នុងទម្រង់បុគ្គលិក</span>
+        </div>
+    </div>
+</div>
+
+<!-- Main Organization Container with Navigation Tabs -->
+<div class="card" style="padding: 0; overflow: hidden; border: 1px solid var(--card-border); box-shadow: var(--shadow-sm);">
+    <!-- Tab Headers -->
+    <div style="display: flex; border-bottom: 2px solid #e2e8f0; background: #f8fafc; padding: 0 16px;">
+        <a href="{{ url_for('organization_manage', tab='departments') }}" 
+           class="org-tab-btn {% if active_tab == 'departments' %}active{% endif %}">
+            <i class="fa-solid fa-building-user"></i>
+            <span>ការិយាល័យ / រចនាសម្ព័ន្ធ (Offices & Departments)</span>
+            <span class="tab-badge">{{ departments|length }}</span>
+        </a>
+        <a href="{{ url_for('organization_manage', tab='positions') }}" 
+           class="org-tab-btn {% if active_tab == 'positions' %}active{% endif %}">
+            <i class="fa-solid fa-id-badge"></i>
+            <span>តួនាទី / មុខតំណែង (Roles & Positions)</span>
+            <span class="tab-badge">{{ positions|length }}</span>
+        </a>
+    </div>
+
+    <!-- TAB 1: DEPARTMENTS / OFFICES -->
+    {% if active_tab == 'departments' %}
+    <div style="padding: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+            <div>
+                <h3 style="font-size: 16px; font-weight: 700; color: var(--text-main); margin: 0;">
+                    <i class="fa-solid fa-building text-primary" style="margin-right: 6px;"></i> បញ្ជីការិយាល័យ និងរចនាសម្ព័ន្ធទាំងអស់
+                </h3>
+                <p style="font-size: 12.5px; color: var(--text-muted); margin: 3px 0 0 0;">
+                    រាល់ការិយាល័យដែលបង្កើតនៅទីនេះ នឹងបង្ហាញក្នុងទម្រង់បញ្ចូលបុគ្គលិក កែប្រែបុគ្គលិក និងផ្ទាំងចម្រាញ់ទិន្នន័យដោយស្វ័យប្រវត្តិ។
+                </p>
+            </div>
+            <button type="button" class="btn btn-primary" onclick="openCreateDeptModal()">
+                <i class="fa-solid fa-plus"></i> បន្ថែមការិយាល័យថ្មី
+            </button>
+        </div>
+
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th style="width: 60px; text-align: center;">ល.រ</th>
+                        <th style="width: 140px;">កូដសម្គាល់</th>
+                        <th>ឈ្មោះការិយាល័យ (ខ្មែរ / អង់គ្លេស)</th>
+                        <th>ការពិពណ៌នា</th>
+                        <th style="width: 150px; text-align: center;">ចំនួនបុគ្គលិក</th>
+                        <th style="width: 130px; text-align: right;">សកម្មភាព</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for dept in departments %}
+                    <tr>
+                        <td style="text-align: center;" class="num">{{ loop.index }}</td>
+                        <td>
+                            <span class="code-tag" style="font-size: 12px; font-weight: 700; color: var(--primary); background: var(--primary-light); padding: 3px 8px; border-radius: 6px;">
+                                {{ dept.code }}
+                            </span>
+                        </td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <div style="width: 34px; height: 34px; border-radius: 8px; background: #eff6ff; color: #2563eb; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0;">
+                                    <i class="fa-solid fa-building"></i>
+                                </div>
+                                <div>
+                                    <div style="font-weight: 700; color: var(--text-main); font-size: 14px;">
+                                        {{ dept.name_kh }}
+                                    </div>
+                                    {% if dept.name_en and dept.name_en != dept.name_kh %}
+                                    <div style="font-size: 11.5px; color: var(--text-muted); font-family: var(--font-en);">
+                                        {{ dept.name_en }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span style="color: {% if dept.description %}var(--text-main){% else %}var(--text-muted){% endif %}; font-size: 13px;">
+                                {{ dept.description or '— គ្មានការពិពណ៌នា —' }}
+                            </span>
+                        </td>
+                        <td style="text-align: center;">
+                            <a href="{{ url_for('employee_list', department_id=dept.id) }}" 
+                               title="ចុចមើលបញ្ជីបុគ្គលិកក្នុងការិយាល័យនេះ"
+                               class="badge {% if dept.employees|length > 0 %}badge-success{% else %}badge-secondary{% endif %}" 
+                               style="display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; padding: 4px 10px; text-decoration: none; border-radius: 9999px;">
+                                <i class="fa-solid fa-user-group"></i>
+                                <span class="num">{{ dept.employees|length }}</span> នាក់
+                            </a>
+                        </td>
+                        <td style="text-align: right;">
+                            <div style="display: inline-flex; gap: 6px; align-items: center;">
+                                <button type="button" class="btn-action-icon" 
+                                        onclick="openEditDeptModal('{{ dept.id }}', '{{ dept.name_kh|escape }}', '{{ (dept.name_en or dept.name_kh)|escape }}', '{{ dept.code|escape }}', '{{ (dept.description or '')|escape }}')"
+                                        title="កែប្រែការិយាល័យ" 
+                                        style="background: #f1f5f9; color: var(--primary);">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
+                                
+                                <form method="POST" action="{{ url_for('department_delete', dept_id=dept.id) }}" style="display: inline;" 
+                                      onsubmit="return confirmDeleteDepartment('{{ dept.name_kh|escape }}', {{ dept.employees|length }});">
+                                    <button type="submit" class="btn-action-icon" 
+                                            title="លុបការិយាល័យ" 
+                                            style="background: #fef2f2; color: #ef4444;" 
+                                            {% if dept.employees|length > 0 %}disabled style="background: #f1f5f9; color: #94a3b8; cursor: not-allowed;" title="មានបុគ្គលិកកំពុងបំពេញការងារ មិនអាចលុបបានទេ"{% endif %}>
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                            <i class="fa-solid fa-building-circle-exclamation" style="font-size: 32px; color: #cbd5e1; margin-bottom: 10px; display: block;"></i>
+                            មិនទាន់មានទិន្នន័យការិយាល័យនៅឡើយទេ
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- TAB 2: POSITIONS / ROLES -->
+    {% if active_tab == 'positions' %}
+    <div style="padding: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+            <div>
+                <h3 style="font-size: 16px; font-weight: 700; color: var(--text-main); margin: 0;">
+                    <i class="fa-solid fa-briefcase text-primary" style="margin-right: 6px;"></i> បញ្ជីតួនាទី និងមុខតំណែងទាំងអស់
+                </h3>
+                <p style="font-size: 12.5px; color: var(--text-muted); margin: 3px 0 0 0;">
+                    រាល់តួនាទីដែលបញ្ចូលនៅទីនេះ នឹងបង្ហាញក្នុងបញ្ជីជ្រើសរើសមុខតំណែងបុគ្គលិក និងផ្ទាំងចម្រាញ់ទិន្នន័យទូទាំងប្រព័ន្ធ។
+                </p>
+            </div>
+            <button type="button" class="btn btn-primary" onclick="openCreatePosModal()">
+                <i class="fa-solid fa-plus"></i> បន្ថែមតួនាទីថ្មី
+            </button>
+        </div>
+
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th style="width: 60px; text-align: center;">ល.រ</th>
+                        <th style="width: 140px;">កូដតួនាទី</th>
+                        <th>ឈ្មោះតួនាទី / មុខតំណែង (ខ្មែរ / អង់គ្លេស)</th>
+                        <th>ការពិពណ៌នា</th>
+                        <th style="width: 150px; text-align: center;">ចំនួនបុគ្គលិក</th>
+                        <th style="width: 130px; text-align: right;">សកម្មភាព</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pos in positions %}
+                    <tr>
+                        <td style="text-align: center;" class="num">{{ loop.index }}</td>
+                        <td>
+                            {% if pos.code %}
+                            <span class="code-tag" style="font-size: 12px; font-weight: 700; color: #4338ca; background: #e0e7ff; padding: 3px 8px; border-radius: 6px;">
+                                {{ pos.code }}
+                            </span>
+                            {% else %}
+                            <span style="color: var(--text-muted); font-size: 12px;">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <div style="width: 34px; height: 34px; border-radius: 8px; background: #e0e7ff; color: #4338ca; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0;">
+                                    <i class="fa-solid fa-id-badge"></i>
+                                </div>
+                                <div>
+                                    <div style="font-weight: 700; color: var(--text-main); font-size: 14px;">
+                                        {{ pos.name_kh }}
+                                    </div>
+                                    {% if pos.name_en %}
+                                    <div style="font-size: 11.5px; color: var(--text-muted); font-family: var(--font-en);">
+                                        {{ pos.name_en }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span style="color: {% if pos.description %}var(--text-main){% else %}var(--text-muted){% endif %}; font-size: 13px;">
+                                {{ pos.description or '— គ្មានការពិពណ៌នា —' }}
+                            </span>
+                        </td>
+                        <td style="text-align: center;">
+                            <a href="{{ url_for('employee_list', position=pos.name_kh) }}" 
+                               title="ចុចមើលបញ្ជីបុគ្គលិកដែលកាន់តួនាទីនេះ"
+                               class="badge {% if pos.employee_count > 0 %}badge-info{% else %}badge-secondary{% endif %}" 
+                               style="display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; padding: 4px 10px; text-decoration: none; border-radius: 9999px;">
+                                <i class="fa-solid fa-user-tie"></i>
+                                <span class="num">{{ pos.employee_count }}</span> នាក់
+                            </a>
+                        </td>
+                        <td style="text-align: right;">
+                            <div style="display: inline-flex; gap: 6px; align-items: center;">
+                                <button type="button" class="btn-action-icon" 
+                                        onclick="openEditPosModal('{{ pos.id }}', '{{ pos.name_kh|escape }}', '{{ (pos.name_en or '')|escape }}', '{{ (pos.code or '')|escape }}', '{{ (pos.description or '')|escape }}')"
+                                        title="កែប្រែតួនាទី" 
+                                        style="background: #f1f5f9; color: var(--primary);">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
+                                
+                                <form method="POST" action="{{ url_for('position_delete', pos_id=pos.id) }}" style="display: inline;" 
+                                      onsubmit="return confirmDeletePosition('{{ pos.name_kh|escape }}', {{ pos.employee_count }});">
+                                    <button type="submit" class="btn-action-icon" 
+                                            title="លុបតួនាទី" 
+                                            style="background: #fef2f2; color: #ef4444;"
+                                            {% if pos.employee_count > 0 %}disabled style="background: #f1f5f9; color: #94a3b8; cursor: not-allowed;" title="មានបុគ្គលិកកាន់តួនាទីនេះ មិនអាចលុបបានទេ"{% endif %}>
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                            <i class="fa-solid fa-id-card" style="font-size: 32px; color: #cbd5e1; margin-bottom: 10px; display: block;"></i>
+                            មិនទាន់មានទិន្នន័យតួនាទីនៅឡើយទេ
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- =========================================================
+     MODAL 1: CREATE DEPARTMENT
+     ========================================================= -->
+<div id="createDeptModal" class="modal-backdrop-custom" style="display: none;">
+    <div class="modal-dialog-custom">
+        <div class="modal-header-custom">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 38px; height: 38px; border-radius: 10px; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                    <i class="fa-solid fa-building-circle-plus"></i>
+                </div>
+                <div>
+                    <h3 style="font-size: 16px; margin: 0; font-weight: 700;">បង្កើតការិយាល័យ / រចនាសម្ព័ន្ធថ្មី</h3>
+                    <p style="font-size: 12px; color: var(--text-muted); margin: 0;">បញ្ចូលការិយាល័យថ្មីទៅក្នុងប្រព័ន្ធ HR</p>
+                </div>
+            </div>
+            <button type="button" class="close-modal-btn" onclick="closeModal('createDeptModal')">&times;</button>
+        </div>
+
+        <form action="{{ url_for('department_create') }}" method="POST">
+            <div class="modal-body-custom">
+                <div class="form-group-custom" style="margin-bottom: 14px;">
+                    <label class="form-label-custom">ឈ្មោះការិយាល័យ (ភាសាខ្មែរ) <span style="color: red;">*</span></label>
+                    <input type="text" name="name_kh" class="form-control" placeholder="ឧទាហរណ៍៖ ការិយាល័យផែនការ..." required autofocus>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+                    <div class="form-group-custom">
+                        <label class="form-label-custom">កូដសម្គាល់ (Code) <span style="color: red;">*</span></label>
+                        <input type="text" name="code" class="form-control num" placeholder="ឧទាហរណ៍៖ OFF-PLAN" required style="text-transform: uppercase;">
+                        <small style="color: var(--text-muted); font-size: 11px;">អក្សរកាត់ ឬកូដសម្គាល់មិនស្ទួន</small>
+                    </div>
+
+                    <div class="form-group-custom">
+                        <label class="form-label-custom">ឈ្មោះជាភាសាអង់គ្លេស</label>
+                        <input type="text" name="name_en" class="form-control" placeholder="Planning Office">
+                    </div>
+                </div>
+
+                <div class="form-group-custom">
+                    <label class="form-label-custom">ការពិពណ៌នា / មុខងារសង្ខេប</label>
+                    <textarea name="description" class="form-control" rows="3" placeholder="ពិពណ៌នាអំពីភារកិច្ច និងការទទួលខុសត្រូវរបស់ការិយាល័យ..."></textarea>
+                </div>
+            </div>
+
+            <div class="modal-footer-custom">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('createDeptModal')">បោះបង់</button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa-solid fa-save"></i> រក្សាទុកការិយាល័យ
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- =========================================================
+     MODAL 2: EDIT DEPARTMENT
+     ========================================================= -->
+<div id="editDeptModal" class="modal-backdrop-custom" style="display: none;">
+    <div class="modal-dialog-custom">
+        <div class="modal-header-custom">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 38px; height: 38px; border-radius: 10px; background: #eff6ff; color: #2563eb; display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                    <i class="fa-solid fa-building-pen"></i>
+                </div>
+                <div>
+                    <h3 style="font-size: 16px; margin: 0; font-weight: 700;">កែប្រែព័ត៌មានការិយាល័យ</h3>
+                    <p style="font-size: 12px; color: var(--text-muted); margin: 0;">កែប្រែឈ្មោះ កូដសម្គាល់ ឬការពិពណ៌នា</p>
+                </div>
+            </div>
+            <button type="button" class="close-modal-btn" onclick="closeModal('editDeptModal')">&times;</button>
+        </div>
+
+        <form id="editDeptForm" method="POST">
+            <div class="modal-body-custom">
+                <div class="form-group-custom" style="margin-bottom: 14px;">
+                    <label class="form-label-custom">ឈ្មោះការិយាល័យ (ភាសាខ្មែរ) <span style="color: red;">*</span></label>
+                    <input type="text" id="edit_dept_name_kh" name="name_kh" class="form-control" required>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+                    <div class="form-group-custom">
+                        <label class="form-label-custom">កូដសម្គាល់ (Code) <span style="color: red;">*</span></label>
+                        <input type="text" id="edit_dept_code" name="code" class="form-control num" required style="text-transform: uppercase;">
+                    </div>
+
+                    <div class="form-group-custom">
+                        <label class="form-label-custom">ឈ្មោះជាភាសាអង់គ្លេស</label>
+                        <input type="text" id="edit_dept_name_en" name="name_en" class="form-control">
+                    </div>
+                </div>
+
+                <div class="form-group-custom">
+                    <label class="form-label-custom">ការពិពណ៌នា / មុខងារសង្ខេប</label>
+                    <textarea id="edit_dept_description" name="description" class="form-control" rows="3"></textarea>
+                </div>
+            </div>
+
+            <div class="modal-footer-custom">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('editDeptModal')">បោះបង់</button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa-solid fa-save"></i> រក្សាទុកការផ្លាស់ប្តូរ
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- =========================================================
+     MODAL 3: CREATE POSITION / ROLE
+     ========================================================= -->
+<div id="createPosModal" class="modal-backdrop-custom" style="display: none;">
+    <div class="modal-dialog-custom">
+        <div class="modal-header-custom">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 38px; height: 38px; border-radius: 10px; background: #e0e7ff; color: #4338ca; display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                    <i class="fa-solid fa-user-tag"></i>
+                </div>
+                <div>
+                    <h3 style="font-size: 16px; margin: 0; font-weight: 700;">បន្ថែមតួនាទី / មុខតំណែងថ្មី</h3>
+                    <p style="font-size: 12px; color: var(--text-muted); margin: 0;">កំណត់តួនាទីការងារថ្មីសម្រាប់បុគ្គលិក</p>
+                </div>
+            </div>
+            <button type="button" class="close-modal-btn" onclick="closeModal('createPosModal')">&times;</button>
+        </div>
+
+        <form action="{{ url_for('position_create') }}" method="POST">
+            <div class="modal-body-custom">
+                <div class="form-group-custom" style="margin-bottom: 14px;">
+                    <label class="form-label-custom">ឈ្មោះតួនាទី (ភាសាខ្មែរ) <span style="color: red;">*</span></label>
+                    <input type="text" name="name_kh" class="form-control" placeholder="ឧទាហរណ៍៖ ប្រធានផ្នែកលក់..." required autofocus>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+                    <div class="form-group-custom">
+                        <label class="form-label-custom">កូដតួនាទី (Optional)</label>
+                        <input type="text" name="code" class="form-control num" placeholder="ឧទាហរណ៍៖ POS-LEAD" style="text-transform: uppercase;">
+                        <small style="color: var(--text-muted); font-size: 11px;">កូដសម្គាល់តួនាទី</small>
+                    </div>
+
+                    <div class="form-group-custom">
+                        <label class="form-label-custom">ឈ្មោះជាភាសាអង់គ្លេស</label>
+                        <input type="text" name="name_en" class="form-control" placeholder="Sales Lead">
+                    </div>
+                </div>
+
+                <div class="form-group-custom">
+                    <label class="form-label-custom">ការពិពណ៌នាតួនាទី</label>
+                    <textarea name="description" class="form-control" rows="3" placeholder="ពិពណ៌នាអំពីកម្រិត និងការទទួលខុសត្រូវនៃតួនាទី..."></textarea>
+                </div>
+            </div>
+
+            <div class="modal-footer-custom">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('createPosModal')">បោះបង់</button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa-solid fa-save"></i> រក្សាទុកតួនាទី
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- =========================================================
+     MODAL 4: EDIT POSITION / ROLE
+     ========================================================= -->
+<div id="editPosModal" class="modal-backdrop-custom" style="display: none;">
+    <div class="modal-dialog-custom">
+        <div class="modal-header-custom">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 38px; height: 38px; border-radius: 10px; background: #e0e7ff; color: #4338ca; display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                    <i class="fa-solid fa-id-badge"></i>
+                </div>
+                <div>
+                    <h3 style="font-size: 16px; margin: 0; font-weight: 700;">កែប្រែព័ត៌មានតួនាទី</h3>
+                    <p style="font-size: 12px; color: var(--text-muted); margin: 0;">កែប្រែឈ្មោះ កូដសម្គាល់ ឬការពិពណ៌នាតួនាទី</p>
+                </div>
+            </div>
+            <button type="button" class="close-modal-btn" onclick="closeModal('editPosModal')">&times;</button>
+        </div>
+
+        <form id="editPosForm" method="POST">
+            <div class="modal-body-custom">
+                <div class="form-group-custom" style="margin-bottom: 14px;">
+                    <label class="form-label-custom">ឈ្មោះតួនាទី (ភាសាខ្មែរ) <span style="color: red;">*</span></label>
+                    <input type="text" id="edit_pos_name_kh" name="name_kh" class="form-control" required>
+                    <small style="color: #64748b; font-size: 11.5px; display: block; margin-top: 4px;">
+                        <i class="fa-solid fa-circle-info text-primary"></i> បុគ្គលិកទាំងអស់ដែលកាន់តួនាទីនេះ នឹងត្រូវធ្វើបច្ចុប្បន្នភាពឈ្មោះតួនាទីដោយស្វ័យប្រវត្តិ។
+                    </small>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+                    <div class="form-group-custom">
+                        <label class="form-label-custom">កូដតួនាទី (Code)</label>
+                        <input type="text" id="edit_pos_code" name="code" class="form-control num" style="text-transform: uppercase;">
+                    </div>
+
+                    <div class="form-group-custom">
+                        <label class="form-label-custom">ឈ្មោះជាភាសាអង់គ្លេស</label>
+                        <input type="text" id="edit_pos_name_en" name="name_en" class="form-control">
+                    </div>
+                </div>
+
+                <div class="form-group-custom">
+                    <label class="form-label-custom">ការពិពណ៌នាតួនាទី</label>
+                    <textarea id="edit_pos_description" name="description" class="form-control" rows="3"></textarea>
+                </div>
+            </div>
+
+            <div class="modal-footer-custom">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('editPosModal')">បោះបង់</button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa-solid fa-save"></i> រក្សាទុកការផ្លាស់ប្តូរ
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    /* Tab Styling */
+    .org-tab-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 14px 20px;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-decoration: none;
+        border-bottom: 3px solid transparent;
+        transition: all 0.2s ease;
+    }
+
+    .org-tab-btn:hover {
+        color: var(--primary);
+        background: rgba(241, 245, 249, 0.6);
+    }
+
+    .org-tab-btn.active {
+        color: var(--primary);
+        border-bottom-color: var(--primary);
+        background: #ffffff;
+        font-weight: 700;
+    }
+
+    .tab-badge {
+        font-size: 11px;
+        font-family: var(--font-en);
+        font-weight: 700;
+        background: #e2e8f0;
+        color: #475569;
+        padding: 2px 7px;
+        border-radius: 9999px;
+    }
+
+    .org-tab-btn.active .tab-badge {
+        background: var(--primary-light);
+        color: var(--primary);
+    }
+
+    /* Modal Styles */
+    .modal-backdrop-custom {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(15, 23, 42, 0.55);
+        backdrop-filter: blur(4px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1050;
+        animation: fadeIn 0.2s ease-out;
+    }
+
+    .modal-dialog-custom {
+        background: #ffffff;
+        width: 100%;
+        max-width: 520px;
+        border-radius: 14px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        overflow: hidden;
+        animation: slideDown 0.2s ease-out;
+        margin: 16px;
+    }
+
+    .modal-header-custom {
+        padding: 16px 20px;
+        border-bottom: 1px solid #f1f5f9;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: #fafafa;
+    }
+
+    .close-modal-btn {
+        background: transparent;
+        border: none;
+        font-size: 24px;
+        line-height: 1;
+        color: var(--text-muted);
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 6px;
+        transition: all 0.15s;
+    }
+
+    .close-modal-btn:hover {
+        color: #ef4444;
+        background: #fef2f2;
+    }
+
+    .modal-body-custom {
+        padding: 20px;
+    }
+
+    .modal-footer-custom {
+        padding: 14px 20px;
+        border-top: 1px solid #f1f5f9;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+        background: #f8fafc;
+    }
+
+    .form-label-custom {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        color: #334155;
+        margin-bottom: 6px;
+    }
+
+    .btn-action-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #e2e8f0;
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+
+    .btn-action-icon:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+</style>
+
+<script>
+    // --- DEPARTMENT MODALS ---
+    function openCreateDeptModal() {
+        document.getElementById('createDeptModal').style.display = 'flex';
+    }
+
+    function openEditDeptModal(id, nameKh, nameEn, code, description) {
+        document.getElementById('edit_dept_name_kh').value = nameKh;
+        document.getElementById('edit_dept_name_en').value = nameEn;
+        document.getElementById('edit_dept_code').value = code;
+        document.getElementById('edit_dept_description').value = description;
+        document.getElementById('editDeptForm').action = '/organization/departments/' + id + '/edit';
+        document.getElementById('editDeptModal').style.display = 'flex';
+    }
+
+    function confirmDeleteDepartment(name, empCount) {
+        if (empCount > 0) {
+            alert('មិនអាចលុបការិយាល័យ "' + name + '" បានទេ ពីព្រោះមានបុគ្គលិកចំនួន ' + empCount + ' នាក់កំពុងបំពេញការងារនៅទីនេះ! សូមផ្ទេរបុគ្គលិកជាមុនសិន។');
+            return false;
+        }
+        return confirm('តើលោកអ្នកពិតជាចង់លុបការិយាល័យ "' + name + '" មែនទេ?');
+    }
+
+    // --- POSITION MODALS ---
+    function openCreatePosModal() {
+        document.getElementById('createPosModal').style.display = 'flex';
+    }
+
+    function openEditPosModal(id, nameKh, nameEn, code, description) {
+        document.getElementById('edit_pos_name_kh').value = nameKh;
+        document.getElementById('edit_pos_name_en').value = nameEn;
+        document.getElementById('edit_pos_code').value = code;
+        document.getElementById('edit_pos_description').value = description;
+        document.getElementById('editPosForm').action = '/organization/positions/' + id + '/edit';
+        document.getElementById('editPosModal').style.display = 'flex';
+    }
+
+    function confirmDeletePosition(name, empCount) {
+        if (empCount > 0) {
+            alert('មិនអាចលុបតួនាទី "' + name + '" បានទេ ពីព្រោះមានបុគ្គលិកចំនួន ' + empCount + ' នាក់កំពុងកាន់តួនាទីនេះ! សូមផ្លាស់ប្តូរតួនាទីបុគ្គលិកជាមុនសិន។');
+            return false;
+        }
+        return confirm('តើលោកអ្នកពិតជាចង់លុបតួនាទី "' + name + '" មែនទេ?');
+    }
+
+    function closeModal(modalId) {
+        document.getElementById(modalId).style.display = 'none';
+    }
+
+    // Close modal when clicking outside dialog
+    window.addEventListener('click', function(e) {
+        ['createDeptModal', 'editDeptModal', 'createPosModal', 'editPosModal'].forEach(function(id) {
+            const modal = document.getElementById(id);
+            if (modal && e.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+    });
+</script>
+{% endblock %}

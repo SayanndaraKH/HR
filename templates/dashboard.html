@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+
+{% block title %}ផ្ទាំងគ្រប់គ្រងទូទៅ (Dashboard) - HRMS កម្ពុជា{% endblock %}
+{% block page_title %}ផ្ទាំងព័ត៌មាន និងស្ថិតិទូទៅ (HR Overview Dashboard){% endblock %}
+{% block page_subtitle %}ទិដ្ឋភាពរួមនៃបុគ្គលិក វត្តមានការងារ និងចំណាយប្រាក់បៀវត្សប្រចាំខែ{% endblock %}
+
+{% block topbar_actions %}
+    <a href="{{ url_for('employee_create') }}" class="btn btn-primary btn-sm">
+        <i class="fa-solid fa-plus"></i> បន្ថែមបុគ្គលិកថ្មី
+    </a>
+{% endblock %}
+
+{% block content %}
+<!-- KPI Cards Row -->
+<div class="grid-kpi">
+    <div class="kpi-card" style="--kpi-color: #4f46e5; --kpi-bg: #eef2ff;">
+        <div class="kpi-info">
+            <h3>បុគ្គលិកសរុប (Total Staff)</h3>
+            <div class="kpi-number">{{ total_employees }} <span style="font-size: 14px; font-weight: normal; color: #64748b;">នាក់</span></div>
+            <div class="kpi-subtext">
+                <span class="badge badge-success">{{ active_employees }} សកម្ម</span>
+                <span class="badge badge-warning">{{ probation_employees }} សាកល្បង</span>
+            </div>
+        </div>
+        <div class="kpi-icon">
+            <i class="fa-solid fa-users"></i>
+        </div>
+    </div>
+
+    <div class="kpi-card" style="--kpi-color: #10b981; --kpi-bg: #ecfdf5;">
+        <div class="kpi-info">
+            <h3>វត្តមានថ្ងៃនេះ (Today Attendance)</h3>
+            <div class="kpi-number">{{ att_rate }}%</div>
+            <div class="kpi-subtext">
+                <span style="color: #10b981; font-weight: 600;">{{ present_today }} មានវត្តមាន</span> • 
+                <span style="color: #f59e0b; font-weight: 600;">{{ late_today }} យឺត</span> • 
+                <span style="color: #ef4444; font-weight: 600;">{{ absent_today }} អវត្តមាន</span>
+            </div>
+        </div>
+        <div class="kpi-icon">
+            <i class="fa-solid fa-user-clock"></i>
+        </div>
+    </div>
+
+    <div class="kpi-card" style="--kpi-color: #f59e0b; --kpi-bg: #fffbeb;">
+        <div class="kpi-info">
+            <h3>ច្បាប់រង់ចាំអនុម័ត (Pending Leaves)</h3>
+            <div class="kpi-number">{{ pending_leaves|length }} <span style="font-size: 14px; font-weight: normal; color: #64748b;">សំណើ</span></div>
+            <div class="kpi-subtext">
+                <a href="{{ url_for('attendance_leaves') }}" style="color: var(--primary); text-decoration: underline;">ពិនិត្យ និងអនុម័ត &rarr;</a>
+            </div>
+        </div>
+        <div class="kpi-icon">
+            <i class="fa-solid fa-file-signature"></i>
+        </div>
+    </div>
+
+    <div class="kpi-card" style="--kpi-color: #0ea5e9; --kpi-bg: #f0f9ff;">
+        <div class="kpi-info">
+            <h3>ចំណាយប្រាក់បៀវត្ស (Net Payroll)</h3>
+            <div class="kpi-number currency">${{ "{:,.2f}".format(total_payroll_cost) }}</div>
+            <div class="kpi-subtext">
+                សរុបខែ <strong class="num">{{ current_month }}</strong> (Gross: ${{ "{:,.2f}".format(total_payroll_gross) }})
+            </div>
+        </div>
+        <div class="kpi-icon">
+            <i class="fa-solid fa-money-bill-trend-up"></i>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-bottom: 28px;">
+    <!-- Payroll by Department Chart -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fa-solid fa-chart-column"></i>
+                ចំណាយប្រាក់បៀវត្សតាមនាយកដ្ឋាន (Payroll Cost by Dept)
+            </div>
+            <a href="{{ url_for('payroll_report') }}" class="btn btn-secondary btn-sm">
+                មើលរបាយការណ៍លម្អិត &rarr;
+            </a>
+        </div>
+        <div style="height: 280px; position: relative;">
+            <canvas id="payrollDeptChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Staff Distribution Chart -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fa-solid fa-chart-pie"></i>
+                សមាមាត្របុគ្គលិក (Headcount)
+            </div>
+        </div>
+        <div style="height: 280px; position: relative;">
+            <canvas id="staffDeptChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Two Column Row: Pending Leaves & Recent Attendance -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+    <!-- Pending Leaves Table -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+                ពាក្យសុំច្បាប់ឈប់សម្រាកថ្មីៗ (Recent Leave Requests)
+            </div>
+            <a href="{{ url_for('attendance_leaves') }}" class="btn btn-secondary btn-sm">ទាំងអស់</a>
+        </div>
+
+        {% if pending_leaves %}
+        <div class="table-responsive">
+            <table class="table-custom">
+                <thead>
+                    <tr>
+                        <th>បុគ្គលិក</th>
+                        <th>ប្រភេទច្បាប់</th>
+                        <th>កាលបរិច្ឆេទ</th>
+                        <th>សកម្មភាព</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for l in pending_leaves %}
+                    <tr>
+                        <td>
+                            <strong>{{ l.employee.full_name_kh }}</strong>
+                            <div class="emp-sub-text">{{ l.employee.position }}</div>
+                        </td>
+                        <td>
+                            <span class="badge badge-purple">{{ l.leave_type_display.kh }}</span>
+                        </td>
+                        <td>
+                            <span class="num">{{ l.start_date.strftime('%d/%m') }} - {{ l.end_date.strftime('%d/%m') }}</span>
+                            <div class="emp-sub-text">({{ l.total_days }} ថ្ងៃ)</div>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-success btn-leave-action"
+                                data-leave-id="{{ l.id }}"
+                                data-emp-name="{{ l.employee.full_name_kh }}"
+                                data-action="approve">
+                                <i class="fa-solid fa-check"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger btn-leave-action"
+                                data-leave-id="{{ l.id }}"
+                                data-emp-name="{{ l.employee.full_name_kh }}"
+                                data-action="reject">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
+            <i class="fa-regular fa-circle-check" style="font-size: 38px; color: var(--success); margin-bottom: 12px; display: block;"></i>
+            <p>មិនមានពាក្យស្នើសុំច្បាប់ដែលកំពុងរង់ចាំនោះទេ!</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Recent Attendance Logs -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fa-solid fa-fingerprint"></i>
+                កំណត់ត្រាវត្តមានចុងក្រោយ (Recent Attendance Logs)
+            </div>
+            <a href="{{ url_for('attendance_daily') }}" class="btn btn-secondary btn-sm">ចូលទំព័រវត្តមាន</a>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table-custom">
+                <thead>
+                    <tr>
+                        <th>បុគ្គលិក</th>
+                        <th>កាលបរិច្ឆេទ</th>
+                        <th>ចូល / ចេញ</th>
+                        <th>ស្ថានភាព</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for a in recent_attendances %}
+                    <tr>
+                        <td>
+                            <strong>{{ a.employee.full_name_kh }}</strong>
+                            <div class="emp-sub-text">{{ a.employee.department.name_kh }}</div>
+                        </td>
+                        <td class="num">{{ a.date.strftime('%d/%m/%Y') }}</td>
+                        <td>
+                            <span class="num" style="color: var(--success-text); font-weight: 600;">{{ a.check_in or '--:--' }}</span>
+                            /
+                            <span class="num" style="color: var(--primary); font-weight: 600;">{{ a.check_out or '--:--' }}</span>
+                        </td>
+                        <td>
+                            <span class="badge {{ a.status_info.class }}">{{ a.status_info.kh }}</span>
+                            {% if a.ot_hours > 0 %}
+                            <span class="badge badge-purple">+{{ a.ot_hours }}h OT</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Leave Action Modal -->
+<div class="modal-overlay" id="modal-leave-action">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3 id="leave-modal-title">អនុម័តច្បាប់ឈប់សម្រាក</h3>
+            <button class="modal-close" data-modal-close>&times;</button>
+        </div>
+        <form method="POST" action="">
+            <div class="modal-body">
+                <input type="hidden" name="action" id="leave-action-type" value="approve">
+                <input type="hidden" name="leave_id" id="leave-action-id" value="">
+                
+                <p style="margin-bottom: 16px;">
+                    តើអ្នកពិតជាចង់ចាត់វិធានការលើពាក្យសុំច្បាប់របស់បុគ្គលិក <strong id="leave-action-emp" style="color: var(--primary);"></strong> មែនដែរឬទេ?
+                </p>
+
+                <div class="form-group">
+                    <label class="form-label">អ្នកអនុម័ត / ឈ្មោះអ្នកសម្រេច</label>
+                    <input type="text" name="admin_name" class="form-control" value="ប្រធានផ្នែក HR / នាយកដ្ឋានធនធានមនុស្ស">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">មតិយោបល់ ឬកំណត់សម្គាល់ (Note)</label>
+                    <textarea name="note" class="form-control" rows="2" placeholder="បញ្ចូលកំណត់សម្គាល់បន្ថែម..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-modal-close>ថយក្រោយ</button>
+                <button type="submit" class="btn btn-success" id="leave-submit-btn">យល់ព្រម</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 1. Department Payroll Cost Bar Chart
+    const deptLabels = {{ dept_labels | tojson }};
+    const deptPayroll = {{ dept_payroll | tojson }};
+    const deptCounts = {{ dept_counts | tojson }};
+
+    const ctxPayroll = document.getElementById('payrollDeptChart').getContext('2d');
+    new Chart(ctxPayroll, {
+        type: 'bar',
+        data: {
+            labels: deptLabels,
+            datasets: [{
+                label: 'ចំណាយប្រាក់បៀវត្ស Net Pay (USD)',
+                data: deptPayroll,
+                backgroundColor: 'rgba(79, 70, 229, 0.85)',
+                borderColor: '#4f46e5',
+                borderWidth: 1,
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) { return '$' + value; }
+                    }
+                }
+            }
+        }
+    });
+
+    // 2. Staff Distribution Doughnut Chart
+    const ctxStaff = document.getElementById('staffDeptChart').getContext('2d');
+    new Chart(ctxStaff, {
+        type: 'doughnut',
+        data: {
+            labels: deptLabels,
+            datasets: [{
+                data: deptCounts,
+                backgroundColor: [
+                    '#4f46e5', '#10b981', '#f59e0b', '#0ea5e9', '#8b5cf6'
+                ],
+                borderWidth: 2,
+                borderColor: '#ffffff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { boxWidth: 12, padding: 12, font: { family: 'Kantumruy Pro' } }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

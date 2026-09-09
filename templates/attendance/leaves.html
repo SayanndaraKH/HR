@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+
+{% block title %}គ្រប់គ្រងការសុំច្បាប់ឈប់សម្រាក (Leave Requests) - HRMS{% endblock %}
+{% block page_title %}គ្រប់គ្រងច្បាប់ឈប់សម្រាក (Leave Management){% endblock %}
+{% block page_subtitle %}តាមដានការស្នើសុំច្បាប់ ពិនិត្យអនុម័ត និងកត់ត្រាប្រវត្តិឈប់សម្រាករបស់បុគ្គលិក{% endblock %}
+
+{% block topbar_actions %}
+    <button type="button" class="btn btn-primary" data-modal-target="modal-new-leave">
+        <i class="fa-solid fa-file-circle-plus"></i> ដាក់ពាក្យសុំច្បាប់ថ្មី (Request Leave)
+    </button>
+{% endblock %}
+
+{% block content %}
+<!-- Leave Types Information Bar -->
+<div class="grid-kpi">
+    <div class="kpi-card" style="--kpi-color: #3b82f6; --kpi-bg: #eff6ff;">
+        <div class="kpi-info">
+            <h3>ច្បាប់ឈប់ប្រចាំឆ្នាំ (Annual)</h3>
+            <div class="kpi-number" style="font-size: 20px;">១៨ ថ្ងៃ / ឆ្នាំ</div>
+            <div class="kpi-subtext">តាមច្បាប់ការងារកម្ពុជា</div>
+        </div>
+        <div class="kpi-icon"><i class="fa-solid fa-umbrella-beach"></i></div>
+    </div>
+
+    <div class="kpi-card" style="--kpi-color: #10b981; --kpi-bg: #ecfdf5;">
+        <div class="kpi-info">
+            <h3>ច្បាប់ឈប់ឈឺ (Sick Leave)</h3>
+            <div class="kpi-number" style="font-size: 20px;">មានលិខិតពេទ្យ</div>
+            <div class="kpi-subtext">ទទួលប្រាក់បៀវត្សតាមលក្ខខណ្ឌ</div>
+        </div>
+        <div class="kpi-icon"><i class="fa-solid fa-notes-medical"></i></div>
+    </div>
+
+    <div class="kpi-card" style="--kpi-color: #ec4899; --kpi-bg: #fdf2f8;">
+        <div class="kpi-info">
+            <h3>ឈប់សម្រាលកូន (Maternity)</h3>
+            <div class="kpi-number" style="font-size: 20px;">៩០ ថ្ងៃ</div>
+            <div class="kpi-subtext">សម្រាប់បុគ្គលិកជាស្ត្រី</div>
+        </div>
+        <div class="kpi-icon"><i class="fa-solid fa-baby"></i></div>
+    </div>
+
+    <div class="kpi-card" style="--kpi-color: #f59e0b; --kpi-bg: #fffbeb;">
+        <div class="kpi-info">
+            <h3>ច្បាប់ពិសេស (Special)</h3>
+            <div class="kpi-number" style="font-size: 20px;">រៀបការ / ពិធីបុណ្យ</div>
+            <div class="kpi-subtext">អតិបរមា ៧ ថ្ងៃ / ឆ្នាំ</div>
+        </div>
+        <div class="kpi-icon"><i class="fa-solid fa-heart"></i></div>
+    </div>
+</div>
+
+<!-- Pending Approvals Section -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <i class="fa-solid fa-clock text-warning"></i>
+            សំណើសុំច្បាប់ដែលកំពុងរង់ចាំការអនុម័ត (Pending Leave Approvals)
+        </div>
+        <span class="badge badge-warning">{{ pending_leaves|length }} សំណើ</span>
+    </div>
+
+    {% if pending_leaves %}
+    <div class="table-responsive">
+        <table class="table-custom">
+            <thead>
+                <tr>
+                    <th>បុគ្គលិក</th>
+                    <th>ប្រភេទច្បាប់</th>
+                    <th>ចាប់ពីថ្ងៃ - ដល់ថ្ងៃ</th>
+                    <th>រយៈពេល</th>
+                    <th>មូលហេតុ</th>
+                    <th>ថ្ងៃស្នើសុំ</th>
+                    <th style="text-align: right;">ការសម្រេច (Action)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for l in pending_leaves %}
+                <tr>
+                    <td>
+                        <div class="emp-profile-tag">
+                            <div class="emp-avatar" style="width: 36px; height: 36px; font-size: 13px;">
+                                {{ l.employee.full_name_en[:2].upper() }}
+                            </div>
+                            <div>
+                                <strong style="color: #0f172a;">{{ l.employee.full_name_kh }}</strong>
+                                <span class="emp-sub-text">{{ l.employee.position }} • {{ l.employee.department.name_kh }}</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge badge-purple">
+                            <i class="{{ l.leave_type_display.icon }}"></i> {{ l.leave_type_display.kh }}
+                        </span>
+                    </td>
+                    <td>
+                        <strong class="num">{{ l.start_date.strftime('%d/%m/%Y') }}</strong> ដល់ 
+                        <strong class="num">{{ l.end_date.strftime('%d/%m/%Y') }}</strong>
+                    </td>
+                    <td>
+                        <span class="badge badge-info num" style="font-size: 13px;">{{ l.total_days }} ថ្ងៃ</span>
+                    </td>
+                    <td style="max-width: 250px;">
+                        {{ l.reason }}
+                    </td>
+                    <td class="num" style="font-size: 12px; color: var(--text-muted);">
+                        {{ l.applied_at.strftime('%d/%m/%Y %H:%M') }}
+                    </td>
+                    <td style="text-align: right; white-space: nowrap;">
+                        <button type="button" class="btn btn-sm btn-success btn-leave-action"
+                            data-leave-id="{{ l.id }}"
+                            data-emp-name="{{ l.employee.full_name_kh }}"
+                            data-action="approve">
+                            <i class="fa-solid fa-check"></i> អនុម័ត
+                        </button>
+                        <button type="button" class="btn btn-sm btn-danger btn-leave-action"
+                            data-leave-id="{{ l.id }}"
+                            data-emp-name="{{ l.employee.full_name_kh }}"
+                            data-action="reject">
+                            <i class="fa-solid fa-xmark"></i> បដិសេធ
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 32px 20px; color: var(--text-muted);">
+        <i class="fa-solid fa-circle-check" style="font-size: 36px; color: #10b981; margin-bottom: 8px; display: block;"></i>
+        <p>ពុំមានសំណើសុំច្បាប់ដែលកំពុងរង់ចាំការអនុម័តឡើយ!</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- All Leaves History Table -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <i class="fa-solid fa-list-check"></i>
+            ប្រវត្តិពាក្យសុំច្បាប់ទាំងអស់ (Leave Requests History)
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table-custom">
+            <thead>
+                <tr>
+                    <th>កូដ & បុគ្គលិក</th>
+                    <th>ប្រភេទច្បាប់</th>
+                    <th>កាលបរិច្ឆេទ</th>
+                    <th>ចំនួនថ្ងៃ</th>
+                    <th>មូលហេតុ</th>
+                    <th>ស្ថានភាព</th>
+                    <th>អ្នកអនុម័ត</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for l in leaves %}
+                <tr>
+                    <td>
+                        <strong>{{ l.employee.full_name_kh }}</strong>
+                        <div class="emp-sub-text num">{{ l.employee.emp_code }} • {{ l.employee.department.name_kh }}</div>
+                    </td>
+                    <td>
+                        <i class="{{ l.leave_type_display.icon }}"></i> {{ l.leave_type_display.kh }}
+                    </td>
+                    <td class="num">
+                        {{ l.start_date.strftime('%d/%m/%Y') }} - {{ l.end_date.strftime('%d/%m/%Y') }}
+                    </td>
+                    <td class="num"><strong>{{ l.total_days }} ថ្ងៃ</strong></td>
+                    <td style="max-width: 260px; font-size: 13px;">{{ l.reason }}</td>
+                    <td>
+                        <span class="badge {{ l.status_info.class }}">{{ l.status_info.kh }}</span>
+                    </td>
+                    <td style="font-size: 12.5px; color: var(--text-muted);">
+                        {{ l.approved_by or '-' }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal: Submit New Leave Request -->
+<div class="modal-overlay" id="modal-new-leave">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-calendar-plus text-primary"></i> ដាក់ពាក្យស្នើសុំច្បាប់ឈប់សម្រាក</h3>
+            <button class="modal-close" data-modal-close>&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('leave_request_submit') }}">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">ជ្រើសរើសបុគ្គលិក (Employee) <span style="color: var(--danger);">*</span></label>
+                    <select name="employee_id" class="form-select" required>
+                        {% for emp in employees %}
+                        <option value="{{ emp.id }}">{{ emp.emp_code }} - {{ emp.full_name_kh }} ({{ emp.department.name_kh }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">ប្រភេទច្បាប់ (Leave Type) <span style="color: var(--danger);">*</span></label>
+                    <select name="leave_type" class="form-select" required>
+                        <option value="annual">ឈប់សម្រាកប្រចាំឆ្នាំ (Annual Leave)</option>
+                        <option value="sick">ឈប់ឈឺ (Sick Leave)</option>
+                        <option value="maternity">ឈប់សម្រាលកូន (Maternity Leave)</option>
+                        <option value="special">ច្បាប់ពិសេស - អាពាហ៍ពិពាហ៍/បុណ្យ (Special Leave)</option>
+                        <option value="unauthorized">អវត្តមានគ្មានច្បាប់ (Unauthorized)</option>
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">ចាប់ពីថ្ងៃ (Start Date) <span style="color: var(--danger);">*</span></label>
+                        <input type="date" name="start_date" class="form-control" value="{{ today.strftime('%Y-%m-%d') }}" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">ដល់ថ្ងៃ (End Date) <span style="color: var(--danger);">*</span></label>
+                        <input type="date" name="end_date" class="form-control" value="{{ today.strftime('%Y-%m-%d') }}" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">មូលហេតុនៃការឈប់សម្រាក (Reason) <span style="color: var(--danger);">*</span></label>
+                    <textarea name="reason" class="form-control" rows="3" placeholder="សូមបញ្ជាក់មូលហេតុច្បាស់លាស់..." required></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-modal-close>បោះបង់</button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa-solid fa-paper-plane"></i> ផ្ញើពាក្យស្នើសុំ
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Leave Approval Modal -->
+<div class="modal-overlay" id="modal-leave-action">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3 id="leave-modal-title">អនុម័តច្បាប់ឈប់សម្រាក</h3>
+            <button class="modal-close" data-modal-close>&times;</button>
+        </div>
+        <form method="POST" action="">
+            <div class="modal-body">
+                <input type="hidden" name="action" id="leave-action-type" value="approve">
+                <input type="hidden" name="leave_id" id="leave-action-id" value="">
+                
+                <p style="margin-bottom: 16px; font-size: 14.5px;">
+                    តើអ្នកពិតជាចង់ចាត់វិធានការលើពាក្យសុំច្បាប់របស់បុគ្គលិក <strong id="leave-action-emp" style="color: var(--primary);"></strong> មែនដែរឬទេ?
+                </p>
+
+                <div class="form-group">
+                    <label class="form-label">អ្នកអនុម័ត / ឈ្មោះអ្នកសម្រេច</label>
+                    <input type="text" name="admin_name" class="form-control" value="ប្រធានផ្នែក HR / នាយកដ្ឋានធនធានមនុស្ស">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">មតិយោបល់ ឬកំណត់សម្គាល់ (Note)</label>
+                    <textarea name="note" class="form-control" rows="2" placeholder="បញ្ចូលកំណត់សម្គាល់បន្ថែម..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-modal-close>ថយក្រោយ</button>
+                <button type="submit" class="btn btn-success" id="leave-submit-btn">យល់ព្រម</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

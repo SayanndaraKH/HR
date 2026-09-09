@@ -1,0 +1,340 @@
+{% extends "base.html" %}
+
+{% block title %}វត្តមានប្រចាំថ្ងៃ (Daily Attendance) - HRMS{% endblock %}
+{% block page_title %}គ្រប់គ្រងវត្តមានប្រចាំថ្ងៃ (Daily Attendance Management){% endblock %}
+{% block page_subtitle %}កត់ត្រាម៉ោងចូល-ចេញ ម៉ោងយឺត ម៉ោងបន្ថែម (OT) និងភ្ជាប់ជាមួយម៉ាស៊ីនស្កេនម្រាមដៃ/កាត{% endblock %}
+
+{% block topbar_actions %}
+    <button type="button" class="btn btn-scanner" data-modal-target="modal-biometric">
+        <i class="fa-solid fa-fingerprint"></i> ក្លែងធ្វើស្កេនម្រាមដៃ (Biometric Simulator)
+    </button>
+{% endblock %}
+
+{% block content %}
+<!-- KPI Stats Row for Selected Date -->
+<div class="grid-kpi">
+    <div class="kpi-card" style="--kpi-color: #10b981; --kpi-bg: #ecfdf5;">
+        <div class="kpi-info">
+            <h3>មានវត្តមាន (Present)</h3>
+            <div class="kpi-number" style="color: #059669;">{{ present_cnt }} <span style="font-size: 14px; font-weight: normal; color: #64748b;">នាក់</span></div>
+            <div class="kpi-subtext">ក្នុងនោះមកយឺត <strong class="num" style="color: #d97706;">{{ late_cnt }}</strong> នាក់</div>
+        </div>
+        <div class="kpi-icon">
+            <i class="fa-solid fa-user-check"></i>
+        </div>
+    </div>
+
+    <div class="kpi-card" style="--kpi-color: #f59e0b; --kpi-bg: #fffbeb;">
+        <div class="kpi-info">
+            <h3>មកយឺត (Late Arrivals)</h3>
+            <div class="kpi-number" style="color: #d97706;">{{ late_cnt }} <span style="font-size: 14px; font-weight: normal; color: #64748b;">នាក់</span></div>
+            <div class="kpi-subtext">លើសពីម៉ោង ០៨:០០ ព្រឹក</div>
+        </div>
+        <div class="kpi-icon">
+            <i class="fa-solid fa-clock"></i>
+        </div>
+    </div>
+
+    <div class="kpi-card" style="--kpi-color: #8b5cf6; --kpi-bg: #f5f3ff;">
+        <div class="kpi-info">
+            <h3>ឈប់ច្បាប់ (On Leave)</h3>
+            <div class="kpi-number" style="color: #7c3aed;">{{ leave_cnt }} <span style="font-size: 14px; font-weight: normal; color: #64748b;">នាក់</span></div>
+            <div class="kpi-subtext">មានការអនុម័តត្រឹមត្រូវ</div>
+        </div>
+        <div class="kpi-icon">
+            <i class="fa-solid fa-calendar-xmark"></i>
+        </div>
+    </div>
+
+    <div class="kpi-card" style="--kpi-color: #ef4444; --kpi-bg: #fef2f2;">
+        <div class="kpi-info">
+            <h3>អវត្តមាន (Absent)</h3>
+            <div class="kpi-number" style="color: #dc2626;">{{ absent_cnt }} <span style="font-size: 14px; font-weight: normal; color: #64748b;">នាក់</span></div>
+            <div class="kpi-subtext">អវត្តមានគ្មានច្បាប់</div>
+        </div>
+        <div class="kpi-icon">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Bar: Choose Date & Department -->
+<div class="filter-bar">
+    <form method="GET" action="{{ url_for('attendance_daily') }}" style="display: flex; flex-wrap: wrap; gap: 14px; align-items: center; width: 100%; justify-content: space-between;">
+        <div class="filter-group">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <label class="form-label" style="margin: 0; white-space: nowrap;"><i class="fa-regular fa-calendar"></i> ជ្រើសរើសថ្ងៃ៖</label>
+                <input type="date" name="date" value="{{ date_str }}" class="form-control" style="width: 170px;" onchange="this.form.submit()">
+            </div>
+
+            <select name="department_id" class="form-select" style="width: 220px;" onchange="this.form.submit()">
+                <option value="">-- ការិយាល័យទាំងអស់ --</option>
+                {% for d in departments %}
+                <option value="{{ d.id }}" {% if selected_dept == d.id %}selected{% endif %}>{{ d.name_kh }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+            <a href="{{ url_for('attendance_daily', date=today.strftime('%Y-%m-%d')) }}" class="btn btn-secondary btn-sm">
+                <i class="fa-solid fa-calendar-day"></i> ថ្ងៃនេះ (Today)
+            </a>
+            <a href="{{ url_for('attendance_leaves') }}" class="btn btn-purple btn-sm">
+                <i class="fa-solid fa-file-signature"></i> គ្រប់គ្រងច្បាប់ (Leaves)
+            </a>
+            <a href="{{ url_for('attendance_report') }}" class="btn btn-secondary btn-sm">
+                <i class="fa-solid fa-chart-simple"></i> របាយការណ៍សរុប
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- Daily Attendance Table -->
+<div class="card" style="padding: 0; overflow: hidden;">
+    <div class="table-responsive">
+        <table class="table-custom">
+            <thead>
+                <tr>
+                    <th>បុគ្គលិក</th>
+                    <th>ការិយាល័យ</th>
+                    <th>ម៉ោងចូល (Check-In)</th>
+                    <th>ម៉ោងចេញ (Check-Out)</th>
+                    <th>ម៉ោងធ្វើការ / OT</th>
+                    <th>ស្ថានភាព</th>
+                    <th>ប្រភពកំណត់ត្រា</th>
+                    <th style="text-align: right;">សកម្មភាព</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for emp in employees %}
+                {% set att = att_dict.get(emp.id) %}
+                <tr>
+                    <td>
+                        <div class="emp-profile-tag">
+                            <div class="emp-avatar" style="width: 36px; height: 36px; font-size: 13px;">
+                                {{ emp.full_name_en[:2].upper() }}
+                            </div>
+                            <div>
+                                <a href="{{ url_for('employee_detail', emp_id=emp.id) }}" class="emp-name-text">
+                                    {{ emp.full_name_kh }}
+                                </a>
+                                <span class="emp-sub-text num">{{ emp.emp_code }} • {{ emp.position }}</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td>{{ emp.department.name_kh }}</td>
+                    <td>
+                        {% if att and att.check_in %}
+                            <strong class="num" style="color: {% if att.late_minutes > 0 %}#d97706{% else %}#059669{% endif %}; font-size: 14px;">
+                                {{ att.check_in }}
+                            </strong>
+                            {% if att.late_minutes > 0 %}
+                            <span class="badge badge-warning" style="margin-left: 4px; font-size: 10.5px;">+{{ att.late_minutes }}mn</span>
+                            {% endif %}
+                        {% else %}
+                            <span style="color: #94a3b8;">--:--</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if att and att.check_out %}
+                            <strong class="num" style="color: var(--primary); font-size: 14px;">
+                                {{ att.check_out }}
+                            </strong>
+                        {% else %}
+                            <span style="color: #94a3b8;">--:--</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if att %}
+                            <span class="num">{{ att.work_hours }}h</span>
+                            {% if att.ot_hours > 0 %}
+                            <span class="badge badge-purple num">+{{ att.ot_hours }}h OT</span>
+                            {% endif %}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if att %}
+                            <span class="badge {{ att.status_info.class }}">{{ att.status_info.kh }}</span>
+                        {% else %}
+                            <span class="badge badge-secondary">មិនទាន់កត់ត្រា</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if att %}
+                            <span class="emp-sub-text">
+                                {% if att.source == 'biometric' %}
+                                <i class="fa-solid fa-fingerprint text-primary"></i> ស្កេនម្រាមដៃ
+                                {% elif att.source == 'card' %}
+                                <i class="fa-solid fa-id-card text-info"></i> កាត RFID
+                                {% else %}
+                                <i class="fa-solid fa-pen text-muted"></i> ដោយដៃ
+                                {% endif %}
+                            </span>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td style="text-align: right; white-space: nowrap;">
+                        <button type="button" class="btn btn-sm btn-secondary" 
+                            onclick="openEditAttendance('{{ emp.id }}', '{{ emp.full_name_kh }}', '{{ att.check_in if att and att.check_in else '' }}', '{{ att.check_out if att and att.check_out else '' }}', '{{ att.status if att else 'present' }}', '{{ att.ot_hours if att else '0' }}', '{{ att.notes if att and att.notes else '' }}')">
+                            <i class="fa-solid fa-pen-to-square"></i> កត់ត្រា
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- 1. Modal: Biometric & Card Scanner Simulator -->
+<div class="modal-overlay" id="modal-biometric">
+    <div class="modal-box">
+        <div class="modal-header" style="background: linear-gradient(135deg, #0f172a, #1e293b); color: white;">
+            <h3 style="color: white;"><i class="fa-solid fa-fingerprint" style="color: #38bdf8;"></i> ម៉ាស៊ីនក្លែងធ្វើស្កេនម្រាមដៃ (Biometric & RFID Simulator)</h3>
+            <button class="modal-close" style="color: #94a3b8;" data-modal-close>&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('simulate_biometric') }}">
+            <input type="hidden" name="date" value="{{ date_str }}">
+            <div class="modal-body">
+                <div style="background: #f0f9ff; border: 1px solid #bae6fd; padding: 12px 16px; border-radius: var(--radius-md); margin-bottom: 20px; font-size: 13.5px; color: #0369a1;">
+                    <i class="fa-solid fa-circle-info"></i> មុខងារនេះជួយក្លែងធ្វើការបញ្ជូនទិន្នន័យពីម៉ាស៊ីនស្កេនម្រាមដៃ ឬកាត (Fingerprint Scanner Device) ចូលមកក្នុងប្រព័ន្ធ HR ដោយផ្ទាល់។
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">របៀបដំណើរការ (Operation Mode)</label>
+                    <div style="display: flex; gap: 20px;">
+                        <label style="cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                            <input type="radio" name="mode" value="single" checked onchange="toggleSimMode(this.value)"> ស្កេនបុគ្គលិកម្នាក់ៗ (Single Punch)
+                        </label>
+                        <label style="cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                            <input type="radio" name="mode" value="batch_all" onchange="toggleSimMode(this.value)"> ស្កេនទាំងអស់គ្នាក្នុងថ្ងៃនេះ (Auto Punch All)
+                        </label>
+                    </div>
+                </div>
+
+                <div id="single-sim-fields">
+                    <div class="form-group">
+                        <label class="form-label">ជ្រើសរើសបុគ្គលិក (Employee)</label>
+                        <select name="employee_id" class="form-select">
+                            {% for emp in employees %}
+                            <option value="{{ emp.id }}">{{ emp.emp_code }} - {{ emp.full_name_kh }} ({{ emp.position }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">ប្រភេទស្កេន (Punch Action)</label>
+                            <select name="punch_type" class="form-select">
+                                <option value="in">ម៉ោងចូល (Check IN - ព្រឹក)</option>
+                                <option value="out">ម៉ោងចេញ (Check OUT - ល្ងាច)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">ម៉ោងស្កេន (Time)</label>
+                            <input type="time" name="punch_time" class="form-control" value="08:00">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">ឧបករណ៍ស្កេន (Device Type)</label>
+                        <select name="source" class="form-select">
+                            <option value="biometric">ម៉ាស៊ីនស្កេនម្រាមដៃ (Optical Fingerprint Scanner)</option>
+                            <option value="card">ម៉ាស៊ីនអូសកាត (RFID Card Swipe Terminal)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-modal-close>បិទ</button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa-solid fa-bolt"></i> បាញ់ទិន្នន័យស្កេន (Simulate Punch)
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 2. Modal: Manual Attendance Record / Edit -->
+<div class="modal-overlay" id="modal-edit-attendance">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-pen-to-square text-primary"></i> កត់ត្រា / កែប្រែវត្តមានបុគ្គលិក</h3>
+            <button class="modal-close" data-modal-close>&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('attendance_record') }}">
+            <input type="hidden" name="date" value="{{ date_str }}">
+            <input type="hidden" name="employee_id" id="edit-att-empid" value="">
+
+            <div class="modal-body">
+                <p style="margin-bottom: 16px; font-size: 14.5px;">
+                    បុគ្គលិក៖ <strong id="edit-att-empname" style="color: var(--primary);"></strong><br>
+                    កាលបរិច្ឆេទ៖ <strong class="num">{{ date_str }}</strong>
+                </p>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">ម៉ោងចូល (Check-In)</label>
+                        <input type="time" name="check_in" id="edit-att-in" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">ម៉ោងចេញ (Check-Out)</label>
+                        <input type="time" name="check_out" id="edit-att-out" class="form-control">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">ស្ថានភាពវត្តមាន (Status)</label>
+                        <select name="status" id="edit-att-status" class="form-select">
+                            <option value="present">មានវត្តមាន (Present)</option>
+                            <option value="late">មកយឺត (Late)</option>
+                            <option value="half_day">ធ្វើការកន្លះថ្ងៃ (Half Day)</option>
+                            <option value="leave">ឈប់ច្បាប់ (Leave)</option>
+                            <option value="absent">អវត្តមានគ្មានច្បាប់ (Absent)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">ម៉ោងបន្ថែម (Overtime - Hours)</label>
+                        <input type="number" step="0.5" name="ot_hours" id="edit-att-ot" class="form-control" value="0.0">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">កំណត់សម្គាល់បន្ថែម (Notes)</label>
+                    <input type="text" name="notes" id="edit-att-notes" class="form-control" placeholder="មូលហេតុយឺត ឬអវត្តមាន...">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-modal-close>បោះបង់</button>
+                <button type="submit" class="btn btn-primary">រក្សាទុកវត្តមាន</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function toggleSimMode(mode) {
+        document.getElementById('single-sim-fields').style.display = (mode === 'batch_all') ? 'none' : 'block';
+    }
+
+    function openEditAttendance(empId, empName, checkIn, checkOut, status, otHours, notes) {
+        document.getElementById('edit-att-empid').value = empId;
+        document.getElementById('edit-att-empname').textContent = empName;
+        document.getElementById('edit-att-in').value = checkIn;
+        document.getElementById('edit-att-out').value = checkOut;
+        document.getElementById('edit-att-status').value = status;
+        document.getElementById('edit-att-ot').value = otHours || 0.0;
+        document.getElementById('edit-att-notes').value = notes;
+
+        document.getElementById('modal-edit-attendance').classList.add('active');
+    }
+</script>
+{% endblock %}

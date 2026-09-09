@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block title %}គ្រប់គ្រងប្រាក់បៀវត្ស (Payroll Management) - HRMS{% endblock %}
+{% block page_title %}គ្រប់គ្រងប្រាក់បៀវត្សប្រចាំខែ (Monthly Payroll Management){% endblock %}
+{% block page_subtitle %}គណនាប្រាក់ខែស្វ័យប្រវត្តិពីវត្តមាន បូកប្រាក់បន្ថែម និងកាត់កង (ប.ស.ស ពន្ធលើប្រាក់បៀវត្ស ការខ្ចីប្រាក់មុន){% endblock %}
+
+{% block topbar_actions %}
+    <form method="POST" action="{{ url_for('payroll_generate') }}" style="display: inline;">
+        <input type="hidden" name="month_year" value="{{ selected_month }}">
+        <button type="submit" class="btn btn-primary" onclick="return confirm('តើអ្នកចង់ទាញទិន្នន័យវត្តមាន និងគណនាប្រាក់ខែឡើងវិញសម្រាប់ខែ {{ selected_month }} នេះមែនទេ?');">
+            <i class="fa-solid fa-calculator"></i> គណនាប្រាក់ខែស្វ័យប្រវត្តិ (Auto Calculate)
+        </button>
+    </form>
+    <a href="{{ url_for('payroll_export_csv', month=selected_month) }}" class="btn btn-success">
+        <i class="fa-solid fa-file-csv"></i> Export CSV
+    </a>
+{% endblock %}
+
+{% block content %}
+<!-- KPI Overview Row -->
+<div class="grid-kpi">
+    <div class="kpi-card" style="--kpi-color: #0ea5e9; --kpi-bg: #f0f9ff;">
+        <div class="kpi-info">
+            <h3>ប្រាក់ខែសរុប (Total Gross Salary)</h3>
+            <div class="kpi-number currency">${{ "{:,.2f}".format(total_gross) }}</div>
+            <div class="kpi-subtext">រួមបញ្ចូលប្រាក់គោល OT និងប្រាក់ឧបត្ថម្ភ</div>
+        </div>
+        <div class="kpi-icon"><i class="fa-solid fa-money-bill-wave"></i></div>
+    </div>
+
+    <div class="kpi-card" style="--kpi-color: #ef4444; --kpi-bg: #fef2f2;">
+        <div class="kpi-info">
+            <h3>ការកាត់ប្រាក់សរុប (Deductions)</h3>
+            <div class="kpi-number currency" style="color: #dc2626;">${{ "{:,.2f}".format(total_deductions) }}</div>
+            <div class="kpi-subtext">ប.ស.ស: <strong class="num">${{ "{:,.2f}".format(total_nssf) }}</strong> • ពន្ធ: <strong class="num">${{ "{:,.2f}".format(total_tax) }}</strong></div>
+        </div>
+        <div class="kpi-icon"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+    </div>
+
+    <div class="kpi-card" style="--kpi-color: #10b981; --kpi-bg: #ecfdf5;">
+        <div class="kpi-info">
+            <h3>ប្រាក់ខែបើកជាក់ស្តែង (Total Net Pay)</h3>
+            <div class="kpi-number currency" style="color: #059669;">${{ "{:,.2f}".format(total_net) }}</div>
+            <div class="kpi-subtext">សមមូលប្រហែល <strong class="num">{{ "{:,.0f}".format(total_net_khr) }}</strong> រៀល</div>
+        </div>
+        <div class="kpi-icon"><i class="fa-solid fa-sack-dollar"></i></div>
+    </div>
+
+    <div class="kpi-card" style="--kpi-color: #8b5cf6; --kpi-bg: #f5f3ff;">
+        <div class="kpi-info">
+            <h3>ស្ថានភាពបើកប្រាក់ខែ (Disbursement)</h3>
+            <div class="kpi-number num">{{ paid_count }} / {{ payrolls|length }}</div>
+            <div class="kpi-subtext">បុគ្គលិកបានបើកប្រាក់ខែរួចរាល់</div>
+        </div>
+        <div class="kpi-icon"><i class="fa-solid fa-circle-check"></i></div>
+    </div>
+</div>
+
+<!-- Filter Bar: Choose Month & Department -->
+<div class="filter-bar">
+    <form method="GET" action="{{ url_for('payroll_list') }}" style="display: flex; flex-wrap: wrap; gap: 14px; align-items: center; width: 100%; justify-content: space-between;">
+        <div class="filter-group">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <label class="form-label" style="margin: 0; white-space: nowrap;"><i class="fa-regular fa-calendar"></i> ប្រចាំខែ/ឆ្នាំ៖</label>
+                <input type="month" name="month" value="{{ selected_month }}" class="form-control" style="width: 170px;" onchange="this.form.submit()">
+            </div>
+
+            <select name="department_id" class="form-select" style="width: 220px;" onchange="this.form.submit()">
+                <option value="">-- ការិយាល័យទាំងអស់ --</option>
+                {% for d in departments %}
+                <option value="{{ d.id }}" {% if selected_dept == d.id %}selected{% endif %}>{{ d.name_kh }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+            <a href="{{ url_for('payroll_report', month=selected_month) }}" class="btn btn-secondary btn-sm">
+                <i class="fa-solid fa-chart-pie"></i> របាយការណ៍ចំណាយតាមផ្នែក
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- Payroll Table -->
+<div class="card" style="padding: 0; overflow: hidden;">
+    <div class="table-responsive">
+        <table class="table-custom">
+            <thead>
+                <tr>
+                    <th>កូដ & បុគ្គលិក</th>
+                    <th>ប្រាក់ខែគោល</th>
+                    <th>វត្តមាន & OT</th>
+                    <th>ប្រាក់បន្ថែម (Allowances)</th>
+                    <th>ប្រាក់ខែសរុប (Gross)</th>
+                    <th>ការកាត់កង (Deductions)</th>
+                    <th>ប្រាក់បើកជាក់ស្តែង (Net Pay)</th>
+                    <th>ស្ថានភាព</th>
+                    <th style="text-align: right;">សកម្មភាព</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in payrolls %}
+                {% set emp = p.employee %}
+                <tr>
+                    <td>
+                        <div class="emp-profile-tag">
+                            <div class="emp-avatar" style="width: 36px; height: 36px; font-size: 13px;">
+                                {{ emp.full_name_en[:2].upper() }}
+                            </div>
+                            <div>
+                                <a href="{{ url_for('employee_detail', emp_id=emp.id) }}" class="emp-name-text">
+                                    {{ emp.full_name_kh }}
+                                </a>
+                                <span class="emp-sub-text num">{{ emp.emp_code }} • {{ emp.department.name_kh }}</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <strong class="currency num">${{ "{:,.2f}".format(p.base_salary) }}</strong>
+                    </td>
+                    <td>
+                        <span class="num">{{ p.worked_days }}/{{ p.standard_work_days }} ថ្ងៃ</span>
+                        {% if p.ot_hours > 0 %}
+                        <div class="emp-sub-text num" style="color: var(--primary);">
+                            +{{ p.ot_hours }}h OT (${{ "{:,.2f}".format(p.ot_amount) }})
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="num currency" style="color: #059669;">+${{ "{:,.2f}".format(p.bonus + p.allowance) }}</span>
+                        <div class="emp-sub-text">
+                            {% if p.bonus > 0 %}Bonus: ${{ p.bonus }} {% endif %}
+                            {% if p.allowance > 0 %}ឧបត្ថម្ភ: ${{ p.allowance }}{% endif %}
+                        </div>
+                    </td>
+                    <td>
+                        <strong class="currency num" style="color: #0f172a; font-size: 14.5px;">${{ "{:,.2f}".format(p.gross_salary) }}</strong>
+                    </td>
+                    <td>
+                        <span class="num currency" style="color: #dc2626;">-${{ "{:,.2f}".format(p.total_deductions) }}</span>
+                        <div class="emp-sub-text" style="font-size: 11px;">
+                            ប.ស.ស: ${{ p.nssf_deduction }} | ពន្ធ: ${{ p.salary_tax }}
+                            {% if p.advance_salary > 0 %} | បើកមុន: ${{ p.advance_salary }}{% endif %}
+                        </div>
+                    </td>
+                    <td>
+                        <strong class="currency num" style="color: #059669; font-size: 16px;">
+                            ${{ "{:,.2f}".format(p.net_salary) }}
+                        </strong>
+                    </td>
+                    <td>
+                        <form method="POST" action="{{ url_for('payroll_update_status', payroll_id=p.id) }}" style="display: inline;">
+                            <select name="payment_status" onchange="this.form.submit()" class="form-select" style="font-size: 11.5px; padding: 3px 8px; width: auto; border-radius: 12px; font-weight: 600; cursor: pointer;
+                                {% if p.payment_status == 'paid' %}background: #ecfdf5; color: #065f46; border-color: #a7f3d0;
+                                {% elif p.payment_status == 'approved' %}background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe;
+                                {% else %}background: #f1f5f9; color: #475569; border-color: #e2e8f0;{% endif %}">
+                                <option value="draft" {% if p.payment_status == 'draft' %}selected{% endif %}>ព្រាង (Draft)</option>
+                                <option value="approved" {% if p.payment_status == 'approved' %}selected{% endif %}>អនុម័ត (Approved)</option>
+                                <option value="paid" {% if p.payment_status == 'paid' %}selected{% endif %}>បើកប្រាក់រួច (Paid)</option>
+                            </select>
+                        </form>
+                    </td>
+                    <td style="text-align: right; white-space: nowrap;">
+                        <a href="{{ url_for('payroll_payslip', payroll_id=p.id) }}" target="_blank" class="btn btn-sm btn-primary" title="មើល & បោះពុម្ព Payslip">
+                            <i class="fa-solid fa-file-invoice"></i> Payslip
+                        </a>
+                        <button type="button" class="btn btn-sm btn-secondary btn-edit-payroll"
+                            data-payroll-id="{{ p.id }}"
+                            data-emp-name="{{ emp.full_name_kh }}"
+                            data-bonus="{{ p.bonus }}"
+                            data-allowance="{{ p.allowance }}"
+                            data-advance="{{ p.advance_salary }}"
+                            data-other="{{ p.other_deductions }}"
+                            data-notes="{{ p.notes or '' }}"
+                            title="កែសម្រួលប្រាក់បន្ថែម / កាត់ប្រាក់">
+                            <i class="fa-solid fa-sliders"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="9" style="text-align: center; padding: 48px 20px; color: var(--text-muted);">
+                        <i class="fa-solid fa-calculator" style="font-size: 40px; margin-bottom: 12px; color: #cbd5e1; display: block;"></i>
+                        <p style="font-size: 15px;">មិនទាន់មានទិន្នន័យប្រាក់បៀវត្សសម្រាប់ខែ {{ selected_month }} នេះនៅឡើយទេ!</p>
+                        <form method="POST" action="{{ url_for('payroll_generate') }}" style="margin-top: 14px;">
+                            <input type="hidden" name="month_year" value="{{ selected_month }}">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fa-solid fa-bolt"></i> ចុចទីនេះដើម្បីគណនាប្រាក់ខែដោយស្វ័យប្រវត្តិ
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal: Edit Adjustments (Bonus, Allowance, Advance Loan) -->
+<div class="modal-overlay" id="modal-edit-payroll">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-sliders text-primary"></i> កែសម្រួលប្រាក់បន្ថែម & ការកាត់កង</h3>
+            <button class="modal-close" data-modal-close>&times;</button>
+        </div>
+        <form method="POST" action="">
+            <input type="hidden" name="payroll_id" id="modal-payroll-id" value="">
+            <div class="modal-body">
+                <p style="margin-bottom: 16px; font-size: 14.5px;">
+                    បុគ្គលិក៖ <strong id="modal-payroll-emp-name" style="color: var(--primary);"></strong><br>
+                    ខែ/ឆ្នាំ៖ <strong class="num">{{ selected_month }}</strong>
+                </p>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">ប្រាក់រង្វាន់លើកទឹកចិត្ត (Bonus - USD)</label>
+                        <input type="number" step="0.01" name="bonus" id="modal-payroll-bonus" class="form-control" value="0.00">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">ប្រាក់ឧបត្ថម្ភការងារ (Allowance - USD)</label>
+                        <input type="number" step="0.01" name="allowance" id="modal-payroll-allowance" class="form-control" value="0.00">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">កាត់ប្រាក់ខ្ចីមុន (Advance Salary Loan - USD)</label>
+                        <input type="number" step="0.01" name="advance_salary" id="modal-payroll-advance" class="form-control" value="0.00">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">ការកាត់ប្រាក់ផ្សេងៗ (Other Deductions)</label>
+                        <input type="number" step="0.01" name="other_deductions" id="modal-payroll-other" class="form-control" value="0.00">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">កំណត់សម្គាល់បន្ថែម (Notes)</label>
+                    <textarea name="notes" id="modal-payroll-notes" class="form-control" rows="2" placeholder="មូលហេតុបន្ថែម ឬកាត់ប្រាក់..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-modal-close>បោះបង់</button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa-solid fa-floppy-disk"></i> រក្សាទុក និងគណនាឡើងវិញ
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
