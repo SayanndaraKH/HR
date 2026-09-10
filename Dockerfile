@@ -26,5 +26,6 @@ RUN mkdir -p uploads/avatars uploads/documents instance
 
 EXPOSE 5000
 
-# Start with Gunicorn production server
-CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:5000", "--workers", "4", "--timeout", "120"]
+# Start with Gunicorn production server with dynamic PORT fallback
+CMD ["sh", "-c", "gunicorn app:app --bind 0.0.0.0:${PORT:-5000} --workers 4 --timeout 120"]
+

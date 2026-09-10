@@ -153,3 +153,14 @@ HR-M/
 - **Username**: `ADMIN`
 - **Password**: `syd001`
 - **សិទ្ធិ**: Admin ពេញលេញលើប្រព័ន្ធទាំងមូល
+
+---
+
+## 🚀 របៀប Hosting ជាមួយ Railway (Railway Deployment)
+
+1. ចុច `push.bat` ដើម្បីរុញកូដចុងក្រោយទៅកាន់ GitHub
+2. ចូលទៅកាន់ [railway.app](https://railway.app/) ហើយ Login ជាមួយ GitHub
+3. ចុច **New Project** -> **Deploy from GitHub repo** -> ជ្រើសរើស repository `HR`
+4. នៅក្នុងផ្ទាំង **Settings** របស់ Service -> ផ្នែក **Networking** -> ចុច **Generate Domain**
+5. ប្រព័ន្ធនឹងផ្តល់ជូន Public Domain (ឧទាហរណ៍៖ `https://hr-production-xxxx.up.railway.app`) សម្រាប់ចូលប្រើប្រាស់បានភ្លាមៗ!
+
